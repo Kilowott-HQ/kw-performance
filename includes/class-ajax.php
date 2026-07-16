@@ -58,6 +58,10 @@ class KWPERF_Ajax {
 		set_transient( 'kwperf_scan_in_progress', 1, HOUR_IN_SECONDS );
 
 		try {
+			// "Run Scan Now" always starts from a clean slate, rather than merging
+			// with whatever the previous scan (or a since-fixed issue) left behind.
+			KWPERF_Logger::clear_all_logs();
+
 			$scanner = new KWPERF_Scanner();
 			$summary = $scanner->run_scan( 'manual' );
 
@@ -227,7 +231,7 @@ class KWPERF_Ajax {
 
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename=kwperf-logs-' . gmdate( 'Y-m-d' ) . '.csv' );
+		header( 'Content-Disposition: attachment; filename=kwperf-logs-' . current_time( 'Y-m-d-H-i-s' ) . '.csv' );
 
 		$output = fopen( 'php://output', 'w' );
 
