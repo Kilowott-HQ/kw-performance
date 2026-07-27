@@ -5,6 +5,7 @@ Automatically crawl your WordPress site's frontend, detect broken links (404s, 4
 - **Plugin Slug:** `kw-performance`
 - **Author:** KW Developers ([kilowott.com](https://kilowott.com))
 - **Requires:** WordPress 5.8+, PHP 8.0+
+- **Download:** [Latest release (zip)](https://github.com/Kilowott-HQ/kw-performance/releases/latest/download/kw-performance.zip)
 
 ## Features
 
@@ -23,7 +24,7 @@ Automatically crawl your WordPress site's frontend, detect broken links (404s, 4
 
 ## Installation
 
-1. Copy the `kw-performance` folder into `wp-content/plugins/`.
+1. Download the [latest release zip](https://github.com/Kilowott-HQ/kw-performance/releases/latest/download/kw-performance.zip) and either upload it via **Plugins → Add New → Upload Plugin**, or extract it into `wp-content/plugins/`.
 2. Activate **KW Performance** from the Plugins screen.
 3. Go to **KW Performance → Settings** to configure the scan interval, notification email, and which post types are scanned.
 
