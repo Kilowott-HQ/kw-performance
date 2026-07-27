@@ -2,7 +2,7 @@
 /**
  * HTML email template for the scan report notification.
  *
- * Expects: array $summary, array $broken_occurrences.
+ * Expects: array $summary, array $broken_groups (broken occurrences grouped by URL).
  *
  * @package KW_Performance
  */
@@ -62,26 +62,41 @@ $logs_url   = admin_url( 'admin.php?page=kwperf-logs' );
 					</tr>
 				</table>
 
-				<?php if ( ! empty( $broken_occurrences ) ) : ?>
+				<?php if ( ! empty( $broken_groups ) ) : ?>
 					<h2 style="font-size:15px;border-bottom:1px solid #dcdcde;padding-bottom:8px;"><?php esc_html_e( 'Broken Links Detail', 'kw-performance' ); ?></h2>
 
-					<?php foreach ( $broken_occurrences as $item ) : ?>
+					<?php foreach ( $broken_groups as $group ) : ?>
 						<table role="presentation" width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;margin-bottom:14px;border:1px solid #dcdcde;">
 							<tr>
-								<td style="background:#f6f7f7;width:140px;"><strong><?php esc_html_e( 'Broken URL', 'kw-performance' ); ?></strong></td>
-								<td><a href="<?php echo esc_url( $item['broken_url'] ); ?>"><?php echo esc_html( $item['broken_url'] ); ?></a></td>
+								<td style="background:#f6f7f7;width:140px;vertical-align:top;"><strong><?php esc_html_e( 'Broken URL', 'kw-performance' ); ?></strong></td>
+								<td><a href="<?php echo esc_url( $group['broken_url'] ); ?>"><?php echo esc_html( $group['broken_url'] ); ?></a></td>
 							</tr>
 							<tr>
-								<td style="background:#f6f7f7;"><strong><?php esc_html_e( 'Found On', 'kw-performance' ); ?></strong></td>
-								<td><a href="<?php echo esc_url( $item['source_permalink'] ); ?>"><?php echo esc_html( $item['source_title'] ? $item['source_title'] : $item['source_permalink'] ); ?></a></td>
+								<td style="background:#f6f7f7;vertical-align:top;">
+									<strong>
+										<?php
+										echo esc_html(
+											count( $group['found_on'] ) > 1
+												/* translators: %d: number of pages the broken link was found on */
+												? sprintf( __( 'Found On (%d pages)', 'kw-performance' ), count( $group['found_on'] ) )
+												: __( 'Found On', 'kw-performance' )
+										);
+										?>
+									</strong>
+								</td>
+								<td>
+									<?php foreach ( $group['found_on'] as $location ) : ?>
+										<div style="margin-bottom:8px;">
+											<a href="<?php echo esc_url( $location['source_permalink'] ); ?>"><?php echo esc_html( $location['source_title'] ? $location['source_title'] : $location['source_permalink'] ); ?></a>
+											<br />
+											<span style="color:#646970;font-size:12px;"><?php echo esc_html( $location['section'] ? $location['section'] : __( '(unknown section)', 'kw-performance' ) ); ?></span>
+										</div>
+									<?php endforeach; ?>
+								</td>
 							</tr>
 							<tr>
-								<td style="background:#f6f7f7;"><strong><?php esc_html_e( 'Section', 'kw-performance' ); ?></strong></td>
-								<td><?php echo esc_html( $item['section'] ? $item['section'] : __( '(unknown)', 'kw-performance' ) ); ?></td>
-							</tr>
-							<tr>
-								<td style="background:#f6f7f7;"><strong><?php esc_html_e( 'Status', 'kw-performance' ); ?></strong></td>
-								<td><?php echo esc_html( $item['http_status'] ); ?></td>
+								<td style="background:#f6f7f7;vertical-align:top;"><strong><?php esc_html_e( 'Status', 'kw-performance' ); ?></strong></td>
+								<td><?php echo esc_html( $group['http_status'] ); ?></td>
 							</tr>
 						</table>
 					<?php endforeach; ?>

@@ -161,8 +161,9 @@ class KWPERF_Slack {
 		);
 
 		$occurrences = isset( $summary['broken_occurrences'] ) ? $summary['broken_occurrences'] : array();
+		$groups      = $this->group_occurrences_by_url( $occurrences );
 
-		if ( ! empty( $occurrences ) ) {
+		if ( ! empty( $groups ) ) {
 			// Slack's "section" block enforces a hard 3000-character limit on mrkdwn
 			// text, so lines are added one at a time and stop once they'd exceed it —
 			// long URLs/titles on a real site can hit that limit well before 10 links.
@@ -171,20 +172,30 @@ class KWPERF_Slack {
 			$listed             = 0;
 			$running_length     = 0;
 
-			foreach ( array_slice( $occurrences, 0, self::MAX_LISTED_LINKS ) as $item ) {
-				$page_label = $item['source_title'] ? $item['source_title'] : $item['source_permalink'];
+			foreach ( array_slice( $groups, 0, self::MAX_LISTED_LINKS ) as $group ) {
+				$found_on_lines = array();
 
-				// Two-line row per broken link: status + link on the first line,
-				// source page + section on the second — keeps both links clickable
-				// (a monospace table would flatten them to plain text instead).
+				// The same broken link commonly appears on more than one page (e.g. a
+				// sitewide menu/header), so every page it was found on gets its own
+				// "Found on" line grouped under one entry, instead of a separate,
+				// identical-looking top-level entry per page.
+				foreach ( $group['found_on'] as $location ) {
+					$page_label = $location['source_title'] ? $location['source_title'] : $location['source_permalink'];
+
+					$found_on_lines[] = sprintf(
+						__( 'Found on', 'kw-performance' ) . ' <%s|%s>%s',
+						$this->escape_mrkdwn( esc_url_raw( $location['source_permalink'] ) ),
+						$this->escape_mrkdwn( $page_label ),
+						$location['section'] ? ' — _' . $this->escape_mrkdwn( $location['section'] ) . '_' : ''
+					);
+				}
+
 				$line = sprintf(
-					"*%d* — <%s|%s>\n" . __( 'Found on', 'kw-performance' ) . ' <%s|%s>%s',
-					(int) $item['http_status'],
-					$this->escape_mrkdwn( esc_url_raw( $item['broken_url'] ) ),
-					$this->escape_mrkdwn( $item['broken_url'] ),
-					$this->escape_mrkdwn( esc_url_raw( $item['source_permalink'] ) ),
-					$this->escape_mrkdwn( $page_label ),
-					$item['section'] ? ' — _' . $this->escape_mrkdwn( $item['section'] ) . '_' : ''
+					"*%d* — <%s|%s>\n%s",
+					(int) $group['http_status'],
+					$this->escape_mrkdwn( esc_url_raw( $group['broken_url'] ) ),
+					$this->escape_mrkdwn( $group['broken_url'] ),
+					implode( "\n", $found_on_lines )
 				);
 
 				// Reserve room for a trailing "…and N more." line (~60 chars is generous).
@@ -197,7 +208,7 @@ class KWPERF_Slack {
 				++$listed;
 			}
 
-			$remaining = count( $occurrences ) - $listed;
+			$remaining = count( $groups ) - $listed;
 			if ( $remaining > 0 ) {
 				$lines[] = sprintf(
 					/* translators: %d: number of additional broken links not shown in the message */
@@ -234,6 +245,39 @@ class KWPERF_Slack {
 			'text'   => $headline, // Fallback text for notifications/clients that don't render blocks.
 			'blocks' => $blocks,
 		);
+	}
+
+	/**
+	 * Group broken link occurrences by URL, since the same broken link
+	 * commonly appears on more than one page (e.g. a sitewide menu/header) —
+	 * without this, it would be listed as a separate, identical-looking entry
+	 * once per page instead of once with all the pages it was found on.
+	 *
+	 * @param array $occurrences Flat list of broken link occurrences.
+	 * @return array List of array{broken_url:string,http_status:int,found_on:array}.
+	 */
+	private function group_occurrences_by_url( $occurrences ) {
+		$groups = array();
+
+		foreach ( $occurrences as $item ) {
+			$key = $item['broken_url'];
+
+			if ( ! isset( $groups[ $key ] ) ) {
+				$groups[ $key ] = array(
+					'broken_url'  => $item['broken_url'],
+					'http_status' => $item['http_status'],
+					'found_on'    => array(),
+				);
+			}
+
+			$groups[ $key ]['found_on'][] = array(
+				'source_permalink' => $item['source_permalink'],
+				'source_title'     => $item['source_title'],
+				'section'          => $item['section'],
+			);
+		}
+
+		return array_values( $groups );
 	}
 
 	/**

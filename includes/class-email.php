@@ -94,11 +94,45 @@ class KWPERF_Email {
 	 */
 	private function build_message( $summary ) {
 		$broken_occurrences = isset( $summary['broken_occurrences'] ) ? $summary['broken_occurrences'] : array();
+		$broken_groups      = $this->group_occurrences_by_url( $broken_occurrences );
 		$logo_url           = $this->get_site_logo_url();
 
 		ob_start();
 		include KWPERF_PLUGIN_DIR . 'templates/email-scan-report.php';
 		return ob_get_clean();
+	}
+
+	/**
+	 * Group broken link occurrences by URL, since the same broken link
+	 * commonly appears on more than one page (e.g. a sitewide menu/header) —
+	 * without this, it would be listed as a separate, identical-looking entry
+	 * once per page instead of once with all the pages it was found on.
+	 *
+	 * @param array $occurrences Flat list of broken link occurrences.
+	 * @return array List of array{broken_url:string,http_status:int,found_on:array}.
+	 */
+	private function group_occurrences_by_url( $occurrences ) {
+		$groups = array();
+
+		foreach ( $occurrences as $item ) {
+			$key = $item['broken_url'];
+
+			if ( ! isset( $groups[ $key ] ) ) {
+				$groups[ $key ] = array(
+					'broken_url'  => $item['broken_url'],
+					'http_status' => $item['http_status'],
+					'found_on'    => array(),
+				);
+			}
+
+			$groups[ $key ]['found_on'][] = array(
+				'source_permalink' => $item['source_permalink'],
+				'source_title'     => $item['source_title'],
+				'section'          => $item['section'],
+			);
+		}
+
+		return array_values( $groups );
 	}
 
 	/**

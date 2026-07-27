@@ -45,7 +45,7 @@ $export_url = wp_nonce_url(
 	<div class="kwperf-stat-cards">
 		<div class="kwperf-stat-card">
 			<span class="kwperf-stat-label"><?php esc_html_e( 'Last Scan', 'kw-performance' ); ?></span>
-			<span class="kwperf-stat-value">
+			<span class="kwperf-stat-value kwperf-stat-value-date">
 				<?php
 				echo $stats['last_scan_date']
 					? esc_html( mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $stats['last_scan_date'] ) )

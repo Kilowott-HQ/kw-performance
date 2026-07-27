@@ -3,7 +3,7 @@
  * Plugin Name:       KW Performance
  * Plugin URI:        https://kilowott.com
  * Description:       Automatically crawls your frontend pages, posts, and custom post types to detect broken links (404s, 410s, broken redirects, and server errors), logs them with page/section context, and notifies admins on a schedule.
- * Version:           1.5.4
+ * Version:           1.5.7
  * Requires at least: 5.8
  * Requires PHP:      8.0
  * Author:            KW Developers
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants.
-define( 'KWPERF_VERSION', '1.5.4' );
+define( 'KWPERF_VERSION', '1.5.7' );
 define( 'KWPERF_PLUGIN_FILE', __FILE__ );
 define( 'KWPERF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'KWPERF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -47,6 +47,10 @@ function kwperf_autoloader( $class_name ) {
 	}
 }
 spl_autoload_register( 'kwperf_autoloader' );
+
+// Self-hosted update checker (GitHub releases) — not a KWPERF_ class, so it
+// isn't picked up by the autoloader above and needs an explicit require.
+require_once KWPERF_PLUGIN_DIR . 'includes/updater.php';
 
 /**
  * Returns the single instance of the core plugin class, instantiating it on first call.

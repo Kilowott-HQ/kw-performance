@@ -14,8 +14,8 @@
 	border: 1px solid #dcdcde;
 	border-radius: 4px;
 	padding: 16px 20px;
-	min-width: 200px;
-	flex: 1 1 200px;
+	min-width: 220px;
+	flex: 1 1 220px;
 	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
@@ -37,6 +37,11 @@
 	font-size: 24px;
 	font-weight: 600;
 	color: #1d2327;
+}
+
+.kwperf-stat-value-date {
+	font-size: 18px;
+	white-space: nowrap;
 }
 
 .kwperf-actions-bar {
