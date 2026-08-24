@@ -54,6 +54,13 @@ class KWPERF_Plugin {
 	public $admin;
 
 	/**
+	 * Signed REST API for the dashboard.
+	 *
+	 * @var KWPERF_Rest_Api
+	 */
+	public $rest_api;
+
+	/**
 	 * Get (and lazily create) the singleton instance.
 	 *
 	 * @return KWPERF_Plugin
@@ -87,6 +94,7 @@ class KWPERF_Plugin {
 		$this->settings = new KWPERF_Settings();
 		$this->cron     = new KWPERF_Cron();
 		$this->ajax     = new KWPERF_Ajax();
+		$this->rest_api = new KWPERF_Rest_Api();
 
 		if ( is_admin() ) {
 			$this->admin = new KWPERF_Admin();
