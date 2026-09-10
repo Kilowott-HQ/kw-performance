@@ -30,8 +30,10 @@ class KWPERF_Ajax {
 		add_action( 'wp_ajax_kwperf_bulk_delete_logs', array( $this, 'ajax_bulk_delete_logs' ) );
 		add_action( 'wp_ajax_kwperf_recheck_logs', array( $this, 'ajax_recheck_logs' ) );
 		add_action( 'wp_ajax_kwperf_test_slack', array( $this, 'ajax_test_slack' ) );
+		add_action( 'wp_ajax_kwperf_save_meta', array( $this, 'ajax_save_meta' ) );
 
 		add_action( 'admin_post_kwperf_export_logs', array( $this, 'export_logs_csv' ) );
+		add_action( 'admin_post_kwperf_export_metas_pdf', array( $this, 'export_metas_pdf' ) );
 	}
 
 	/**
@@ -217,6 +219,41 @@ class KWPERF_Ajax {
 	}
 
 	/**
+	 * AJAX: save an inline edit of a post's meta title or meta description
+	 * from the Metas screen, routed to whichever SEO plugin is active.
+	 */
+	public function ajax_save_meta() {
+		$this->verify_request();
+
+		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+		$field   = isset( $_POST['field'] ) ? sanitize_key( wp_unslash( $_POST['field'] ) ) : '';
+		$value   = isset( $_POST['value'] ) ? wp_unslash( $_POST['value'] ) : '';
+
+		if ( ! $post_id || ! get_post( $post_id ) || ! in_array( $field, array( 'title', 'description' ), true ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid request.', 'kw-performance' ) ) );
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to edit this item.', 'kw-performance' ) ), 403 );
+		}
+
+		if ( 'title' === $field ) {
+			$value = sanitize_text_field( $value );
+			KWPERF_Meta_Manager::save_title( $post_id, $value );
+		} else {
+			$value = sanitize_textarea_field( $value );
+			KWPERF_Meta_Manager::save_description( $post_id, $value );
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => __( 'Saved.', 'kw-performance' ),
+				'value'   => $value,
+			)
+		);
+	}
+
+	/**
 	 * admin-post handler: stream the logs table as a CSV download.
 	 */
 	public function export_logs_csv() {
@@ -275,5 +312,27 @@ class KWPERF_Ajax {
 
 		fclose( $output );
 		exit;
+	}
+
+	/**
+	 * admin-post handler: stream a PDF of one post type's meta title/description
+	 * data (the Metas screen's "Download PDF" button).
+	 */
+	public function export_metas_pdf() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to perform this action.', 'kw-performance' ) );
+		}
+
+		check_admin_referer( 'kwperf_export_metas_pdf' );
+
+		$post_type  = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : '';
+		$search     = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
+		$configured = (array) KWPERF_Settings::get( 'post_types', array( 'post', 'page' ) );
+
+		if ( ! in_array( $post_type, $configured, true ) || ! post_type_exists( $post_type ) ) {
+			wp_die( esc_html__( 'Invalid post type.', 'kw-performance' ) );
+		}
+
+		KWPERF_Pdf_Export::stream( $post_type, $search );
 	}
 }

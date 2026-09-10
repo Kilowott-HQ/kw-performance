@@ -1,6 +1,6 @@
 # KW Performance
 
-Automatically crawl your WordPress site's frontend, detect broken links (404s, 410s, broken/looping redirects, and 5xx server errors), log exactly where each broken link lives on the page, and get notified by email — all from one clean admin screen.
+Automatically crawl your WordPress site's frontend, detect broken links (404s, 410s, broken/looping redirects, and 5xx server errors), log exactly where each broken link lives on the page, and get notified by email — all from one clean admin screen. Also includes a Metas screen for editing every page's meta title and description inline, kept in sync with Yoast SEO or Rank Math.
 
 - **Plugin Slug:** `kw-performance`
 - **Author:** KW Developers ([kilowott.com](https://kilowott.com))
@@ -19,6 +19,7 @@ Automatically crawl your WordPress site's frontend, detect broken links (404s, 4
 - HTML email report sent to one or more configurable admin addresses (comma-separated) after each scheduled scan when broken links are found (optionally even when none are found).
 - Optional Slack notifications via an Incoming Webhook — same trigger as email, with a "Send Test Notification" button that checks the webhook before you save.
 - Searchable, sortable, paginated 404 Log admin screen built on `WP_List_Table`, with filtering by status type, CSV export, single/bulk delete, and single/bulk/"recheck all" re-validation.
+- **Metas** screen: a tab per configured post type listing its published entries with Page Title, Page Link, Meta Title, and Meta Description, edited inline and saved live. Reads/writes Yoast SEO (`_yoast_wpseo_title` / `_yoast_wpseo_metadesc`) or Rank Math (`rank_math_title` / `rank_math_description`) meta when one of those plugins is active, or its own post meta as a fallback when neither is installed. "Download PDF" exports the current tab (respecting the active search) as a styled report matching the companion Security Dashboard's own PDF exports.
 - Scan History screen showing duration, pages/links scanned, broken/working counts, and any errors for every past run (manual or scheduled).
 - Nonce-protected AJAX endpoints, `manage_options` capability checks, sanitized input, escaped output, and prepared SQL throughout.
 
@@ -69,6 +70,23 @@ On activation, it automatically migrates the old plugin's logs, scan history, an
 | Times Detected | How many consecutive scans have found this link broken |
 
 Use the search box and status filter (404 / 410 / 5xx / broken redirects) to narrow the list, click column headers to sort, and use the bulk action dropdown to delete or recheck multiple rows at once. "Recheck All" re-validates every logged link immediately and removes any that are now resolved.
+
+### Metas
+
+**KW Performance → Metas** lists the published entries for each post type enabled in Settings, one tab per post type, with:
+
+| Column | Description |
+|---|---|
+| Page Title | Linked to the post's edit screen |
+| Page Link | The live permalink |
+| Meta Title | Editable inline; saved on "Save" |
+| Meta Description | Editable inline; saved on "Save" |
+
+Edits save immediately via AJAX to whichever SEO plugin is active — Yoast SEO or Rank Math — so the values shown here always match what that plugin (and the site's frontend `<title>`/meta description output) uses. If neither plugin is active, KW Performance stores the values itself in its own post meta so the screen still works standalone. A note above the tabs shows which of these is currently in effect.
+
+Note: a blank Meta Title/Description doesn't necessarily mean nothing is set — it means that specific post has no *per-post override* saved. Yoast/Rank Math both fall back to a sitewide template (post title + separator + site name) when no override exists; typing a value here and clicking Save creates that override, the same as filling in the field directly in Yoast's/Rank Math's own post-editor panel.
+
+"Download PDF" exports everything on the current tab (all matching pages, not just the current page of results) as a PDF report — dark banded table header, zebra-striped rows, one row per page with its title, link, meta title, and meta description.
 
 ### Scan History
 
@@ -141,13 +159,20 @@ kw-performance/
 │   ├── class-email.php        HTML notification email
 │   ├── class-slack.php        Slack Incoming Webhook notification
 │   ├── class-ajax.php         AJAX + admin-post (CSV export) handlers
+│   ├── class-meta-manager.php Reads/writes meta title/description (Yoast/Rank Math/fallback)
+│   ├── class-pdf-export.php   Builds the Metas screen's "Download PDF" report
 │   ├── class-logs-list-table.php
+│   ├── class-metas-list-table.php
 │   └── class-history-list-table.php
-└── templates/
-    ├── settings-page.php
-    ├── logs-page.php
-    ├── scan-history-page.php
-    └── email-scan-report.php
+├── templates/
+│   ├── settings-page.php
+│   ├── logs-page.php
+│   ├── metas-page.php
+│   ├── scan-history-page.php
+│   └── email-scan-report.php
+└── vendor/
+    ├── plugin-update-checker/ Self-hosted (GitHub releases) update checker
+    └── fpdf/                  FPDF (MIT) — PDF generation for the Metas export
 ```
 
 ## Security

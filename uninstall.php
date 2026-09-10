@@ -40,4 +40,9 @@ if ( $kwperf_delete_data ) {
 	// Table names are derived from $wpdb->prefix, not user input.
 	$wpdb->query( "DROP TABLE IF EXISTS {$kwperf_logs_table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	$wpdb->query( "DROP TABLE IF EXISTS {$kwperf_history_table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+
+	// Meta title/description values KW Performance stored itself (only used
+	// when no SEO plugin was active to own that data).
+	delete_post_meta_by_key( '_kwperf_meta_title' );
+	delete_post_meta_by_key( '_kwperf_meta_description' );
 }

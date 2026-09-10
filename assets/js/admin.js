@@ -299,6 +299,32 @@
 		}
 	}
 
+	// --- Metas page: inline meta title/description editing --------------
+
+	$( document ).on( 'click', '.kwperf-save-meta', function () {
+		var $wrap   = $( this ).closest( '.kwperf-meta-edit' );
+		var $input  = $wrap.find( '.kwperf-meta-input' );
+		var $result = $wrap.find( '.kwperf-meta-save-result' );
+		var postId  = $wrap.data( 'post-id' );
+		var field   = $wrap.data( 'field' );
+		var value   = $input.val();
+
+		$result.removeClass( 'kwperf-inline-success kwperf-inline-error' ).text( kwperf.i18n.savingMeta );
+
+		kwperfRequest( 'kwperf_save_meta', { post_id: postId, field: field, value: value } )
+			.done( function ( response ) {
+				if ( response.success ) {
+					$input.val( response.data.value );
+					$result.addClass( 'kwperf-inline-success' ).text( kwperf.i18n.metaSaved );
+				} else {
+					$result.addClass( 'kwperf-inline-error' ).text( ( response.data && response.data.message ) || kwperf.i18n.metaSaveFailed );
+				}
+			} )
+			.fail( function () {
+				$result.addClass( 'kwperf-inline-error' ).text( kwperf.i18n.metaSaveFailed );
+			} );
+	} );
+
 	$( document ).on( 'click', '#doaction', function ( e ) {
 		e.preventDefault();
 		handleBulkAction( 'action' );

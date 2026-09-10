@@ -68,6 +68,15 @@ class KWPERF_Admin {
 
 		$this->page_hooks[] = add_submenu_page(
 			'kwperf-settings',
+			__( 'Metas', 'kw-performance' ),
+			__( 'Metas', 'kw-performance' ),
+			'manage_options',
+			'kwperf-metas',
+			array( $this, 'render_metas_page' )
+		);
+
+		$this->page_hooks[] = add_submenu_page(
+			'kwperf-settings',
 			__( 'Scan History', 'kw-performance' ),
 			__( 'Scan History', 'kw-performance' ),
 			'manage_options',
@@ -111,6 +120,9 @@ class KWPERF_Admin {
 					'noWebhookUrl'        => __( 'Enter a webhook URL first.', 'kw-performance' ),
 					'testSlackFailed'     => __( 'Could not reach Slack. Please check the webhook URL.', 'kw-performance' ),
 					'rechecking'          => __( 'Rechecking selected links…', 'kw-performance' ),
+					'savingMeta'          => __( 'Saving…', 'kw-performance' ),
+					'metaSaved'           => __( 'Saved', 'kw-performance' ),
+					'metaSaveFailed'      => __( 'Could not save. Please try again.', 'kw-performance' ),
 				),
 			)
 		);
@@ -169,6 +181,43 @@ class KWPERF_Admin {
 		$list_table->prepare_items();
 
 		include KWPERF_PLUGIN_DIR . 'templates/logs-page.php';
+	}
+
+	/**
+	 * Render the Metas screen.
+	 */
+	public function render_metas_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'kw-performance' ) );
+		}
+
+		$post_types = (array) KWPERF_Settings::get( 'post_types', array( 'post', 'page' ) );
+		$post_types = array_values( array_filter( $post_types, 'post_type_exists' ) );
+		if ( empty( $post_types ) ) {
+			$post_types = array( 'post' );
+		}
+
+		$requested    = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$current_type = in_array( $requested, $post_types, true ) ? $requested : $post_types[0];
+
+		// Some custom post types are owned by other plugins whose own title/permalink
+		// filters can throw outside a normal front-end request. Row-level failures are
+		// already contained inside KWPERF_Metas_List_Table; this is the last-resort net
+		// so a failure anywhere else in this screen shows a readable message instead of
+		// a raw 500.
+		try {
+			$list_table = new KWPERF_Metas_List_Table( $current_type );
+			$list_table->prepare_items();
+
+			include KWPERF_PLUGIN_DIR . 'templates/metas-page.php';
+		} catch ( Throwable $e ) {
+			error_log( sprintf( 'KW Performance: Metas screen failed for post type %s: %s', $current_type, $e->getMessage() ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			wp_die(
+				esc_html__( 'The Metas screen ran into an unexpected error for this post type, likely from another plugin that manages it. Check your site\'s error log for the details logged just before this message.', 'kw-performance' ),
+				esc_html__( 'KW Performance — Metas', 'kw-performance' ),
+				array( 'back_link' => true )
+			);
+		}
 	}
 
 	/**

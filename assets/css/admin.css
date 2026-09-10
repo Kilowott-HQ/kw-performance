@@ -121,7 +121,21 @@
 }
 
 #kwperf-scan-result.notice,
-#kwperf-log-action-result.notice {
+#kwperf-log-action-result.notice,
+#kwperf-meta-action-result.notice {
 	margin: 10px 0 15px;
 	padding: 10px 12px;
+}
+
+.kwperf-wrap .nav-tab-wrapper {
+	margin-bottom: 10px;
+}
+
+.kwperf-meta-edit .kwperf-meta-input {
+	width: 100%;
+	max-width: 360px;
+}
+
+.kwperf-meta-edit .kwperf-save-meta {
+	margin-top: 4px;
 }
