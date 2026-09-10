@@ -77,6 +77,16 @@ PEM;
 				'permission_callback' => array( $this, 'verify_clear_signature' ),
 			)
 		);
+
+		register_rest_route(
+			'kw-performance/v1',
+			'/meta-info',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_meta_info' ),
+				'permission_callback' => array( $this, 'verify_meta_info_signature' ),
+			)
+		);
 	}
 
 	/**
@@ -98,6 +108,16 @@ PEM;
 	 */
 	public function verify_clear_signature( $request ) {
 		return $this->verify_signature( $request, '404-log-clear' );
+	}
+
+	/**
+	 * Permission callback for the meta-info read route.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return true|WP_Error
+	 */
+	public function verify_meta_info_signature( $request ) {
+		return $this->verify_signature( $request, 'meta-info' );
 	}
 
 	/**
@@ -158,5 +178,78 @@ PEM;
 	public function clear_logs() {
 		KWPERF_Logger::clear_all_logs();
 		return rest_ensure_response( array( 'ok' => true ) );
+	}
+
+	/**
+	 * Returns every published entry of one configured post type — Page
+	 * Title, Page Link, Meta Title, Meta Description — plus the list of
+	 * post types this site is configured to track, so the dashboard's post
+	 * type filter has options without a separate round trip. Read-only:
+	 * nothing here ever writes back to the site. Mirrors the wp-admin
+	 * Metas screen and its PDF export (KWPERF_Metas_List_Table,
+	 * KWPERF_Pdf_Export) minus pagination, same "never paginated, the
+	 * dashboard mirrors nothing locally" reasoning as get_logs() above.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response
+	 */
+	public function get_meta_info( $request ) {
+		$configured = (array) KWPERF_Settings::get( 'post_types', array( 'post', 'page' ) );
+		$configured = array_values( array_filter( $configured, 'post_type_exists' ) );
+		if ( empty( $configured ) ) {
+			$configured = array( 'post' );
+		}
+
+		$requested = sanitize_key( (string) $request->get_param( 'post_type' ) );
+		$post_type = in_array( $requested, $configured, true ) ? $requested : $configured[0];
+
+		$available_post_types = array();
+		foreach ( $configured as $type ) {
+			$type_object            = get_post_type_object( $type );
+			$available_post_types[] = array(
+				'key'   => $type,
+				'label' => $type_object ? $type_object->labels->name : $type,
+			);
+		}
+
+		$query = new WP_Query(
+			array(
+				'post_type'              => $post_type,
+				'post_status'            => 'publish',
+				'posts_per_page'         => -1,
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$items = array();
+
+		foreach ( $query->posts as $post ) {
+			// Same defensive try/catch as KWPERF_Metas_List_Table::prepare_items()
+			// and KWPERF_Pdf_Export::fetch_rows() — a third-party plugin owning
+			// this post type shouldn't be able to take down the whole response,
+			// just skip this row.
+			try {
+				$items[] = array(
+					'title'            => get_the_title( $post ),
+					'permalink'        => get_permalink( $post ),
+					'meta_title'       => KWPERF_Meta_Manager::get_title( $post->ID ),
+					'meta_description' => KWPERF_Meta_Manager::get_description( $post->ID ),
+				);
+			} catch ( Throwable $e ) {
+				error_log( sprintf( 'KW Performance: meta-info row failed for post %d (%s): %s', $post->ID, $post_type, $e->getMessage() ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			}
+		}
+
+		return rest_ensure_response(
+			array(
+				'ok'                   => true,
+				'post_type'            => $post_type,
+				'available_post_types' => $available_post_types,
+				'items'                => $items,
+			)
+		);
 	}
 }
