@@ -61,6 +61,13 @@ class KWPERF_Plugin {
 	public $rest_api;
 
 	/**
+	 * Front-end Google Tag Manager injection.
+	 *
+	 * @var KWPERF_Gtm
+	 */
+	public $gtm;
+
+	/**
 	 * Get (and lazily create) the singleton instance.
 	 *
 	 * @return KWPERF_Plugin
@@ -95,6 +102,7 @@ class KWPERF_Plugin {
 		$this->cron     = new KWPERF_Cron();
 		$this->ajax     = new KWPERF_Ajax();
 		$this->rest_api = new KWPERF_Rest_Api();
+		$this->gtm      = new KWPERF_Gtm();
 
 		if ( is_admin() ) {
 			$this->admin = new KWPERF_Admin();

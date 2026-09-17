@@ -1,6 +1,6 @@
 # KW Performance
 
-Automatically crawl your WordPress site's frontend, detect broken links (404s, 410s, broken/looping redirects, and 5xx server errors), log exactly where each broken link lives on the page, and get notified by email — all from one clean admin screen. Also includes a Metas screen for editing every page's meta title and description inline, kept in sync with Yoast SEO or Rank Math.
+Automatically crawl your WordPress site's frontend, detect broken links (404s, 410s, broken/looping redirects, and 5xx server errors), log exactly where each broken link lives on the page, and get notified by email — all from one clean admin screen. Also includes a Metas screen for editing every page's meta title and description inline (kept in sync with Yoast SEO or Rank Math), and a Tracking screen for configuring Google Tag Manager.
 
 - **Plugin Slug:** `kw-performance`
 - **Author:** KW Developers ([kilowott.com](https://kilowott.com))
@@ -20,6 +20,7 @@ Automatically crawl your WordPress site's frontend, detect broken links (404s, 4
 - Optional Slack notifications via an Incoming Webhook — same trigger as email, with a "Send Test Notification" button that checks the webhook before you save.
 - Searchable, sortable, paginated 404 Log admin screen built on `WP_List_Table`, with filtering by status type, CSV export, single/bulk delete, and single/bulk/"recheck all" re-validation.
 - **Metas** screen: a tab per configured post type listing its published entries with Page Title, Page Link, Meta Title, and Meta Description, edited inline and saved live. Reads/writes Yoast SEO (`_yoast_wpseo_title` / `_yoast_wpseo_metadesc`) or Rank Math (`rank_math_title` / `rank_math_description`) meta when one of those plugins is active, or its own post meta as a fallback when neither is installed. "Download PDF" exports the current tab (respecting the active search) as a styled report matching the companion Security Dashboard's own PDF exports.
+- **Tracking** screen: all analytics/tracking on the site is done through Google Tag Manager — enter one or more GTM container IDs and choose how the container code is placed (Footer, Custom, Codeless injection, or Off — data layer only). No other analytics integrations are built in; everything else is configured inside GTM itself.
 - Scan History screen showing duration, pages/links scanned, broken/working counts, and any errors for every past run (manual or scheduled).
 - Nonce-protected AJAX endpoints, `manage_options` capability checks, sanitized input, escaped output, and prepared SQL throughout.
 
@@ -87,6 +88,18 @@ Edits save immediately via AJAX to whichever SEO plugin is active — Yoast SEO 
 Note: a blank Meta Title/Description doesn't necessarily mean nothing is set — it means that specific post has no *per-post override* saved. Yoast/Rank Math both fall back to a sitewide template (post title + separator + site name) when no override exists; typing a value here and clicking Save creates that override, the same as filling in the field directly in Yoast's/Rank Math's own post-editor panel.
 
 "Download PDF" exports everything on the current tab (all matching pages, not just the current page of results) as a PDF report — dark banded table header, zebra-striped rows, one row per page with its title, link, meta title, and meta description.
+
+### Tracking
+
+**KW Performance → Tracking** configures Google Tag Manager, the only tracking mechanism this plugin wires up directly:
+
+- **Google Tag Manager ID** — one or more container IDs (format `GTM-XXXXXXX`), comma-separated with no spaces. Anything that doesn't match that format is rejected on save with an inline error.
+- **Container Code Placement**:
+  - *Footer of the page* — both the container script and its `<noscript>` fallback are printed in the footer. Simplest, zero template changes, but delays tracking (not Google's recommended placement).
+  - *Custom* — the container script still prints automatically in `<head>`, but the `<noscript>` fallback is left for you to place by hand: add `<?php if ( function_exists( 'kwperf_the_gtm_tag' ) ) { kwperf_the_gtm_tag(); } ?>` immediately after your theme's opening `<body>` tag.
+  - *Codeless injection* — the container script prints in `<head>`, and the `<noscript>` fallback is spliced in automatically right after the opening `<body>` tag via output buffering. No template edit needed, but (like any HTML rewrite of the full page output) it's the one mode that could misbehave with an unusual theme/plugin combination.
+  - *Off* — only the `dataLayer` initializer is printed; no container script or `<noscript>` fallback at all.
+- A small `window.dataLayer = window.dataLayer || [];` initializer is always printed as early as possible in `<head>` whenever at least one GTM ID is configured (including in *Off* mode), so nothing pushed to it before the container loads gets lost.
 
 ### Scan History
 
@@ -161,6 +174,7 @@ kw-performance/
 │   ├── class-ajax.php         AJAX + admin-post (CSV export) handlers
 │   ├── class-meta-manager.php Reads/writes meta title/description (Yoast/Rank Math/fallback)
 │   ├── class-pdf-export.php   Builds the Metas screen's "Download PDF" report
+│   ├── class-gtm.php          Front-end Google Tag Manager container injection
 │   ├── class-logs-list-table.php
 │   ├── class-metas-list-table.php
 │   └── class-history-list-table.php
@@ -168,6 +182,7 @@ kw-performance/
 │   ├── settings-page.php
 │   ├── logs-page.php
 │   ├── metas-page.php
+│   ├── tracking-page.php
 │   ├── scan-history-page.php
 │   └── email-scan-report.php
 └── vendor/

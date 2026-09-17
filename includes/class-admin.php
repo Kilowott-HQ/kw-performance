@@ -77,6 +77,15 @@ class KWPERF_Admin {
 
 		$this->page_hooks[] = add_submenu_page(
 			'kwperf-settings',
+			__( 'Tracking', 'kw-performance' ),
+			__( 'Tracking', 'kw-performance' ),
+			'manage_options',
+			'kwperf-tracking',
+			array( $this, 'render_tracking_page' )
+		);
+
+		$this->page_hooks[] = add_submenu_page(
+			'kwperf-settings',
 			__( 'Scan History', 'kw-performance' ),
 			__( 'Scan History', 'kw-performance' ),
 			'manage_options',
@@ -132,7 +141,9 @@ class KWPERF_Admin {
 	 * Show a "settings saved" admin notice.
 	 */
 	public function maybe_render_settings_notice() {
-		if ( ! isset( $_GET['page'], $_GET['settings-updated'] ) || 'kwperf-settings' !== $_GET['page'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$pages_with_settings = array( 'kwperf-settings', 'kwperf-tracking' );
+
+		if ( ! isset( $_GET['page'], $_GET['settings-updated'] ) || ! in_array( $_GET['page'], $pages_with_settings, true ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return;
 		}
 
@@ -218,6 +229,17 @@ class KWPERF_Admin {
 				array( 'back_link' => true )
 			);
 		}
+	}
+
+	/**
+	 * Render the Tracking screen.
+	 */
+	public function render_tracking_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'kw-performance' ) );
+		}
+
+		include KWPERF_PLUGIN_DIR . 'templates/tracking-page.php';
 	}
 
 	/**

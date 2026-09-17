@@ -50,6 +50,8 @@ class KWPERF_Settings {
 			'delete_data_on_uninstall' => 0,
 			'slack_enabled'      => 0,
 			'slack_webhook_url'  => '',
+			'gtm_ids'            => '',
+			'gtm_placement'      => 'footer',
 		);
 	}
 
@@ -166,6 +168,29 @@ class KWPERF_Settings {
 			'kwperf-settings',
 			'kwperf_slack_section'
 		);
+
+		add_settings_section(
+			'kwperf_tracking_section',
+			__( 'Google Tag Manager', 'kw-performance' ),
+			'__return_false',
+			'kwperf-tracking'
+		);
+
+		add_settings_field(
+			'gtm_ids',
+			__( 'Google Tag Manager ID', 'kw-performance' ),
+			array( $this, 'render_gtm_ids_field' ),
+			'kwperf-tracking',
+			'kwperf_tracking_section'
+		);
+
+		add_settings_field(
+			'gtm_placement',
+			__( 'Container Code Placement', 'kw-performance' ),
+			array( $this, 'render_gtm_placement_field' ),
+			'kwperf-tracking',
+			'kwperf_tracking_section'
+		);
 	}
 
 	/**
@@ -227,6 +252,41 @@ class KWPERF_Settings {
 
 		$output['slack_enabled']     = $slack_enabled;
 		$output['slack_webhook_url'] = $slack_webhook_url;
+
+		$raw_gtm_ids     = isset( $input['gtm_ids'] ) ? (string) $input['gtm_ids'] : '';
+		$candidate_ids   = array_map( 'trim', explode( ',', strtoupper( $raw_gtm_ids ) ) );
+		$valid_gtm_ids   = array();
+		$invalid_gtm_ids = array();
+
+		foreach ( $candidate_ids as $candidate_id ) {
+			if ( '' === $candidate_id ) {
+				continue;
+			}
+			if ( preg_match( '/^GTM-[A-Z0-9]+$/', $candidate_id ) ) {
+				$valid_gtm_ids[] = $candidate_id;
+			} else {
+				$invalid_gtm_ids[] = $candidate_id;
+			}
+		}
+
+		$output['gtm_ids'] = implode( ',', array_values( array_unique( $valid_gtm_ids ) ) );
+
+		if ( ! empty( $invalid_gtm_ids ) ) {
+			add_settings_error(
+				self::OPTION_KEY,
+				'kwperf_gtm_ids_invalid',
+				sprintf(
+					/* translators: %s: comma-separated list of rejected values */
+					__( 'These Google Tag Manager IDs look invalid and were not saved (expected format GTM-XXXXXXX): %s', 'kw-performance' ),
+					implode( ', ', $invalid_gtm_ids )
+				)
+			);
+		}
+
+		$allowed_placements     = array( 'footer', 'custom', 'codeless', 'off' );
+		$output['gtm_placement'] = in_array( $input['gtm_placement'] ?? '', $allowed_placements, true )
+			? $input['gtm_placement']
+			: $defaults['gtm_placement'];
 
 		// Reschedule cron if the interval, start time, or enabled state changed.
 		if ( class_exists( 'KWPERF_Cron' ) ) {
@@ -451,6 +511,47 @@ class KWPERF_Settings {
 			<input type="checkbox" id="kwperf_delete_data_on_uninstall" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[delete_data_on_uninstall]" value="1" <?php checked( $value, 1 ); ?> />
 			<?php esc_html_e( 'Permanently delete all logs, scan history, and settings when this plugin is uninstalled', 'kw-performance' ); ?>
 		</label>
+		<?php
+	}
+
+	/**
+	 * Render: Google Tag Manager ID(s) field.
+	 */
+	public function render_gtm_ids_field() {
+		$value = self::get( 'gtm_ids' );
+		?>
+		<input type="text" class="regular-text" id="kwperf_gtm_ids" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[gtm_ids]" value="<?php echo esc_attr( $value ); ?>" placeholder="GTM-XXXXX" />
+		<p class="description"><?php esc_html_e( 'Enter your Google Tag Manager ID here. Use comma without space (,) to enter multiple IDs.', 'kw-performance' ); ?></p>
+		<?php
+	}
+
+	/**
+	 * Render: Container code placement radio buttons, plus the manual
+	 * template-tag snippet needed when "Custom" is selected.
+	 */
+	public function render_gtm_placement_field() {
+		$value   = self::get( 'gtm_placement' );
+		$options = array(
+			'footer'   => __( 'Footer of the page (not recommended by Google, no tweak in your template required)', 'kw-performance' ),
+			'custom'   => __( 'Custom (needs tweak in your template)', 'kw-performance' ),
+			'codeless' => __( 'Codeless injection (no tweak, right placement but experimental, could break your frontend)', 'kw-performance' ),
+			'off'      => __( 'Off (only add data layer to the page source)', 'kw-performance' ),
+		);
+		?>
+		<fieldset>
+			<?php foreach ( $options as $key => $label ) : ?>
+				<label style="display:block;margin-bottom:6px;">
+					<input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[gtm_placement]" value="<?php echo esc_attr( $key ); ?>" <?php checked( $value, $key ); ?> />
+					<?php echo esc_html( $label ); ?>
+				</label>
+			<?php endforeach; ?>
+		</fieldset>
+		<p class="description"><?php esc_html_e( 'Select how your container code should be included in your website.', 'kw-performance' ); ?></p>
+		<p class="description">
+			<?php esc_html_e( "If you select 'Custom' you need to edit your template file and add the following line just after the opening <body> tag:", 'kw-performance' ); ?>
+			<br />
+			<code>&lt;?php if ( function_exists( 'kwperf_the_gtm_tag' ) ) { kwperf_the_gtm_tag(); } ?&gt;</code>
+		</p>
 		<?php
 	}
 }
