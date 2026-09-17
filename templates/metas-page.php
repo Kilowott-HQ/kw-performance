@@ -15,8 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 $pdf_export_url = wp_nonce_url(
 	add_query_arg(
 		array(
-			'post_type' => $current_type,
-			's'         => isset( $_REQUEST['s'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			'kwperf_post_type' => $current_type,
+			's'                => isset( $_REQUEST['s'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		),
 		admin_url( 'admin-post.php?action=kwperf_export_metas_pdf' )
 	),
@@ -46,8 +46,8 @@ $pdf_export_url = wp_nonce_url(
 			}
 			$tab_url = add_query_arg(
 				array(
-					'page'      => 'kwperf-metas',
-					'post_type' => $type,
+					'page'             => 'kwperf-metas',
+					'kwperf_post_type' => $type,
 				),
 				admin_url( 'admin.php' )
 			);
@@ -62,7 +62,7 @@ $pdf_export_url = wp_nonce_url(
 
 	<form method="get">
 		<input type="hidden" name="page" value="kwperf-metas" />
-		<input type="hidden" name="post_type" value="<?php echo esc_attr( $current_type ); ?>" />
+		<input type="hidden" name="kwperf_post_type" value="<?php echo esc_attr( $current_type ); ?>" />
 		<?php $list_table->search_box( __( 'Search Pages', 'kw-performance' ), 'kwperf-metas' ); ?>
 		<?php $list_table->display(); ?>
 	</form>

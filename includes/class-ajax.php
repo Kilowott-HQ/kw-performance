@@ -325,7 +325,7 @@ class KWPERF_Ajax {
 
 		check_admin_referer( 'kwperf_export_metas_pdf' );
 
-		$post_type  = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : '';
+		$post_type  = isset( $_GET['kwperf_post_type'] ) ? sanitize_key( wp_unslash( $_GET['kwperf_post_type'] ) ) : '';
 		$search     = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 		$configured = (array) KWPERF_Settings::get( 'post_types', array( 'post', 'page' ) );
 

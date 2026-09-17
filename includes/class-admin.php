@@ -208,7 +208,11 @@ class KWPERF_Admin {
 			$post_types = array( 'post' );
 		}
 
-		$requested    = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// Deliberately NOT named "post_type": WordPress core's own wp-admin/admin.php
+		// treats $_REQUEST['post_type'] as reserved when it matches a real post type —
+		// it changes which parent key core uses to resolve this page's menu hook,
+		// causing "Cannot load kwperf-metas." even though the menu is registered fine.
+		$requested    = isset( $_GET['kwperf_post_type'] ) ? sanitize_key( wp_unslash( $_GET['kwperf_post_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$current_type = in_array( $requested, $post_types, true ) ? $requested : $post_types[0];
 
 		// Some custom post types are owned by other plugins whose own title/permalink

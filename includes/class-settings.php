@@ -51,7 +51,7 @@ class KWPERF_Settings {
 			'slack_enabled'      => 0,
 			'slack_webhook_url'  => '',
 			'gtm_ids'            => '',
-			'gtm_placement'      => 'footer',
+			'gtm_placement'      => 'codeless',
 		);
 	}
 

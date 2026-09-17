@@ -62,7 +62,7 @@ class KWPERF_Gtm {
 	 * @return string
 	 */
 	private static function get_placement() {
-		return (string) KWPERF_Settings::get( 'gtm_placement', 'footer' );
+		return (string) KWPERF_Settings::get( 'gtm_placement', 'codeless' );
 	}
 
 	/**
