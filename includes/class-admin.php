@@ -38,27 +38,20 @@ class KWPERF_Admin {
 	 * Register the admin menu and submenus.
 	 */
 	public function register_menus() {
-		$this->page_hooks[] = add_menu_page(
-			__( 'KW Performance', 'kw-performance' ),
-			__( 'KW Performance', 'kw-performance' ),
-			'manage_options',
-			'kwperf-settings',
-			array( $this, 'render_settings_page' ),
-			'dashicons-editor-unlink',
-			80
-		);
-
+		// Nested under the core Settings menu rather than its own top-level
+		// icon — every page keeps its existing "kwperf-*" slug (and therefore
+		// its existing admin.php?page=... URLs), only the parent changes.
 		$this->page_hooks[] = add_submenu_page(
-			'kwperf-settings',
-			__( 'Settings', 'kw-performance' ),
-			__( 'Settings', 'kw-performance' ),
+			'options-general.php',
+			__( 'KW Performance', 'kw-performance' ),
+			__( 'KW Performance', 'kw-performance' ),
 			'manage_options',
 			'kwperf-settings',
 			array( $this, 'render_settings_page' )
 		);
 
 		$this->page_hooks[] = add_submenu_page(
-			'kwperf-settings',
+			'options-general.php',
 			__( '404 Log', 'kw-performance' ),
 			__( '404 Log', 'kw-performance' ),
 			'manage_options',
@@ -67,7 +60,7 @@ class KWPERF_Admin {
 		);
 
 		$this->page_hooks[] = add_submenu_page(
-			'kwperf-settings',
+			'options-general.php',
 			__( 'Metas', 'kw-performance' ),
 			__( 'Metas', 'kw-performance' ),
 			'manage_options',
@@ -76,7 +69,7 @@ class KWPERF_Admin {
 		);
 
 		$this->page_hooks[] = add_submenu_page(
-			'kwperf-settings',
+			'options-general.php',
 			__( 'Tracking', 'kw-performance' ),
 			__( 'Tracking', 'kw-performance' ),
 			'manage_options',
@@ -85,7 +78,7 @@ class KWPERF_Admin {
 		);
 
 		$this->page_hooks[] = add_submenu_page(
-			'kwperf-settings',
+			'options-general.php',
 			__( 'Scan History', 'kw-performance' ),
 			__( 'Scan History', 'kw-performance' ),
 			'manage_options',

@@ -28,7 +28,7 @@ Automatically crawl your WordPress site's frontend, detect broken links (404s, 4
 
 1. Download the [latest release zip](https://github.com/Kilowott-HQ/kw-performance/releases/latest/download/kw-performance.zip) and either upload it via **Plugins → Add New → Upload Plugin**, or extract it into `wp-content/plugins/`.
 2. Activate **KW Performance** from the Plugins screen.
-3. Go to **KW Performance → Settings** to configure the scan interval, notification email, and which post types are scanned.
+3. Go to **Settings → KW Performance** to configure the scan interval, notification email, and which post types are scanned.
 
 Activation automatically creates the plugin's database tables and schedules the recurring scan; deactivation removes the scheduled cron event without touching your logged data.
 
@@ -45,7 +45,7 @@ On activation, it automatically migrates the old plugin's logs, scan history, an
 
 ### Settings
 
-**KW Performance → Settings** lets you:
+**Settings → KW Performance** lets you:
 
 - Enable/disable scheduled scanning and choose the interval.
 - Set the notification email address(es) — comma-separate multiple addresses (defaults to the site admin email).
@@ -58,7 +58,7 @@ On activation, it automatically migrates the old plugin's logs, scan history, an
 
 ### 404 Log
 
-**KW Performance → 404 Log** lists every currently-broken link with:
+**Settings → 404 Log** lists every currently-broken link with:
 
 | Column | Description |
 |---|---|
@@ -74,7 +74,7 @@ Use the search box and status filter (404 / 410 / 5xx / broken redirects) to nar
 
 ### Metas
 
-**KW Performance → Metas** lists the published entries for each post type enabled in Settings, one tab per post type, with:
+**Settings → Metas** lists the published entries for each post type enabled in Settings, one tab per post type, with:
 
 | Column | Description |
 |---|---|
@@ -91,7 +91,7 @@ Note: a blank Meta Title/Description doesn't necessarily mean nothing is set —
 
 ### Tracking
 
-**KW Performance → Tracking** configures Google Tag Manager, the only tracking mechanism this plugin wires up directly:
+**Settings → Tracking** configures Google Tag Manager, the only tracking mechanism this plugin wires up directly:
 
 - **Google Tag Manager ID** — one or more container IDs (format `GTM-XXXXXXX`), comma-separated with no spaces. Anything that doesn't match that format is rejected on save with an inline error.
 - **Container Code Placement**:
@@ -103,7 +103,7 @@ Note: a blank Meta Title/Description doesn't necessarily mean nothing is set —
 
 ### Scan History
 
-**KW Performance → Scan History** shows every completed scan (manual or scheduled) with its date, duration, pages/links scanned, broken/working counts, and any fetch errors encountered.
+**Settings → Scan History** shows every completed scan (manual or scheduled) with its date, duration, pages/links scanned, broken/working counts, and any fetch errors encountered.
 
 ## Database Schema
 
