@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<?php
 			printf(
 				/* translators: %s: plugin version number */
-				esc_html__( 'Version %s', 'kw-performance' ),
+				esc_html__( '(V: %s)', 'kw-performance' ),
 				esc_html( KWPERF_VERSION )
 			);
 			?>
