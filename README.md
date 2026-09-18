@@ -28,7 +28,7 @@ Automatically crawl your WordPress site's frontend, detect broken links (404s, 4
 
 1. Download the [latest release zip](https://github.com/Kilowott-HQ/kw-performance/releases/latest/download/kw-performance.zip) and either upload it via **Plugins → Add New → Upload Plugin**, or extract it into `wp-content/plugins/`.
 2. Activate **KW Performance** from the Plugins screen.
-3. Go to **Settings → KW Performance** to configure the scan interval, notification email, and which post types are scanned. Hovering "KW Performance" there reveals a nested fly-out with the other four screens (404 Log, Metas, Tracking, Scan History) — they're not otherwise listed separately under Settings.
+3. Go to **Settings → KW Performance** to configure the scan interval, notification email, and which post types are scanned. Everything else (Scan History, Tracking, Metas, 404 Log) is a tab on that same page, not a separate menu item.
 
 Activation automatically creates the plugin's database tables and schedules the recurring scan; deactivation removes the scheduled cron event without touching your logged data.
 
@@ -43,9 +43,11 @@ On activation, it automatically migrates the old plugin's logs, scan history, an
 
 ## Usage
 
+Everything lives on one admin page — **Settings → KW Performance** — with a tab for each section, in this order: Settings, Scan History, Tracking, Metas, 404 Log.
+
 ### Settings
 
-**Settings → KW Performance** lets you:
+The **Settings** tab lets you:
 
 - Enable/disable scheduled scanning and choose the interval.
 - Set the notification email address(es) — comma-separate multiple addresses (defaults to the site admin email).
@@ -58,7 +60,7 @@ On activation, it automatically migrates the old plugin's logs, scan history, an
 
 ### 404 Log
 
-**Settings → KW Performance → 404 Log** lists every currently-broken link with:
+The **404 Log** tab lists every currently-broken link with:
 
 | Column | Description |
 |---|---|
@@ -74,7 +76,7 @@ Use the search box and status filter (404 / 410 / 5xx / broken redirects) to nar
 
 ### Metas
 
-**Settings → KW Performance → Metas** lists the published entries for each post type enabled in Settings, one tab per post type, with:
+The **Metas** tab lists the published entries for each post type enabled in Settings, with its own secondary tab per post type, with:
 
 | Column | Description |
 |---|---|
@@ -91,7 +93,7 @@ Note: a blank Meta Title/Description doesn't necessarily mean nothing is set —
 
 ### Tracking
 
-**Settings → KW Performance → Tracking** configures Google Tag Manager, the only tracking mechanism this plugin wires up directly:
+The **Tracking** tab configures Google Tag Manager, the only tracking mechanism this plugin wires up directly:
 
 - **Google Tag Manager ID** — one or more container IDs (format `GTM-XXXXXXX`), comma-separated with no spaces. Anything that doesn't match that format is rejected on save with an inline error.
 - **Container Code Placement**:
@@ -103,7 +105,7 @@ Note: a blank Meta Title/Description doesn't necessarily mean nothing is set —
 
 ### Scan History
 
-**Settings → KW Performance → Scan History** shows every completed scan (manual or scheduled) with its date, duration, pages/links scanned, broken/working counts, and any fetch errors encountered.
+The **Scan History** tab shows every completed scan (manual or scheduled) with its date, duration, pages/links scanned, broken/working counts, and any fetch errors encountered.
 
 ## Database Schema
 
@@ -158,8 +160,8 @@ kw-performance/
 ├── test-404-template.php   Theme page template — one-page test of every scanner case
 ├── test-404-mu-plugin.php  Companion mu-plugin — makes the test page's simulated cases work under HEAD checks
 ├── assets/
-│   ├── css/admin.css, admin-menu.css
-│   ├── js/admin.js, admin-menu.js
+│   ├── css/admin.css
+│   ├── js/admin.js
 │   └── images/icon.svg, logo-horizontal.svg
 ├── includes/
 │   ├── class-plugin.php       Core singleton / lifecycle
@@ -179,11 +181,12 @@ kw-performance/
 │   ├── class-metas-list-table.php
 │   └── class-history-list-table.php
 ├── templates/
-│   ├── settings-page.php
-│   ├── logs-page.php
-│   ├── metas-page.php
-│   ├── tracking-page.php
-│   ├── scan-history-page.php
+│   ├── main-page.php       Shared wrapper: heading (with version), tab nav, active tab's content
+│   ├── settings-page.php   Settings tab content
+│   ├── logs-page.php       404 Log tab content
+│   ├── metas-page.php      Metas tab content
+│   ├── tracking-page.php   Tracking tab content
+│   ├── scan-history-page.php  Scan History tab content
 │   └── email-scan-report.php
 └── vendor/
     ├── plugin-update-checker/ Self-hosted (GitHub releases) update checker

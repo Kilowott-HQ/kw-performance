@@ -108,7 +108,7 @@ class KWPERF_Slack {
 	private function build_payload( $summary ) {
 		$site_name = wp_specialchars_decode( get_bloginfo( 'name' ) );
 		$broken    = (int) $summary['broken_links_found'];
-		$logs_url  = admin_url( 'options-general.php?page=kwperf-logs' );
+		$logs_url  = admin_url( 'options-general.php?page=kwperf-settings&tab=logs' );
 
 		$headline = $broken > 0
 			? sprintf(

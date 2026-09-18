@@ -1,6 +1,6 @@
 <?php
 /**
- * Metas page template.
+ * Metas tab content.
  *
  * Expects: array $post_types (configured post type slugs), string $current_type,
  * KWPERF_Metas_List_Table $list_table (already prepared).
@@ -23,47 +23,46 @@ $pdf_export_url = wp_nonce_url(
 	'kwperf_export_metas_pdf'
 );
 ?>
-<div class="wrap kwperf-wrap">
-	<h1 class="wp-heading-inline"><?php esc_html_e( 'Metas', 'kw-performance' ); ?></h1>
-	<a href="<?php echo esc_url( $pdf_export_url ); ?>" class="page-title-action"><?php esc_html_e( 'Download PDF', 'kw-performance' ); ?></a>
+<p><a href="<?php echo esc_url( $pdf_export_url ); ?>" class="button"><?php esc_html_e( 'Download PDF', 'kw-performance' ); ?></a></p>
 
-	<p class="description">
+<p class="description">
+	<?php
+	printf(
+		/* translators: %s: "Yoast SEO", "Rank Math", both, or a fallback label */
+		esc_html__( 'Meta titles and descriptions are read from, and saved to, %s.', 'kw-performance' ),
+		esc_html( KWPERF_Meta_Manager::source_label() )
+	);
+	?>
+</p>
+
+<h3 class="nav-tab-wrapper">
+	<?php foreach ( $post_types as $type ) : ?>
 		<?php
-		printf(
-			/* translators: %s: "Yoast SEO", "Rank Math", both, or a fallback label */
-			esc_html__( 'Meta titles and descriptions are read from, and saved to, %s.', 'kw-performance' ),
-			esc_html( KWPERF_Meta_Manager::source_label() )
+		$type_object = get_post_type_object( $type );
+		if ( ! $type_object ) {
+			continue;
+		}
+		$tab_url = add_query_arg(
+			array(
+				'page'             => 'kwperf-settings',
+				'tab'              => 'metas',
+				'kwperf_post_type' => $type,
+			),
+			admin_url( 'options-general.php' )
 		);
 		?>
-	</p>
+		<a href="<?php echo esc_url( $tab_url ); ?>" class="nav-tab <?php echo $type === $current_type ? 'nav-tab-active' : ''; ?>">
+			<?php echo esc_html( $type_object->labels->name ); ?>
+		</a>
+	<?php endforeach; ?>
+</h3>
 
-	<h2 class="nav-tab-wrapper">
-		<?php foreach ( $post_types as $type ) : ?>
-			<?php
-			$type_object = get_post_type_object( $type );
-			if ( ! $type_object ) {
-				continue;
-			}
-			$tab_url = add_query_arg(
-				array(
-					'page'             => 'kwperf-metas',
-					'kwperf_post_type' => $type,
-				),
-				admin_url( 'options-general.php' )
-			);
-			?>
-			<a href="<?php echo esc_url( $tab_url ); ?>" class="nav-tab <?php echo $type === $current_type ? 'nav-tab-active' : ''; ?>">
-				<?php echo esc_html( $type_object->labels->name ); ?>
-			</a>
-		<?php endforeach; ?>
-	</h2>
+<div id="kwperf-meta-action-result" class="notice" style="display:none;"></div>
 
-	<div id="kwperf-meta-action-result" class="notice" style="display:none;"></div>
-
-	<form method="get">
-		<input type="hidden" name="page" value="kwperf-metas" />
-		<input type="hidden" name="kwperf_post_type" value="<?php echo esc_attr( $current_type ); ?>" />
-		<?php $list_table->search_box( __( 'Search Pages', 'kw-performance' ), 'kwperf-metas' ); ?>
-		<?php $list_table->display(); ?>
-	</form>
-</div>
+<form method="get">
+	<input type="hidden" name="page" value="kwperf-settings" />
+	<input type="hidden" name="tab" value="metas" />
+	<input type="hidden" name="kwperf_post_type" value="<?php echo esc_attr( $current_type ); ?>" />
+	<?php $list_table->search_box( __( 'Search Pages', 'kw-performance' ), 'kwperf-metas' ); ?>
+	<?php $list_table->display(); ?>
+</form>

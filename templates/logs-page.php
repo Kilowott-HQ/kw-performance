@@ -1,6 +1,6 @@
 <?php
 /**
- * 404 Log page template.
+ * 404 Log tab content.
  *
  * Expects: KWPERF_Logs_List_Table $list_table (already prepared).
  *
@@ -20,15 +20,13 @@ $export_url = wp_nonce_url(
 	'kwperf_export_logs'
 );
 ?>
-<div class="wrap kwperf-wrap">
-	<h1 class="wp-heading-inline"><?php esc_html_e( '404 Log', 'kw-performance' ); ?></h1>
-	<a href="<?php echo esc_url( $export_url ); ?>" class="page-title-action"><?php esc_html_e( 'Export CSV', 'kw-performance' ); ?></a>
+<p><a href="<?php echo esc_url( $export_url ); ?>" class="button"><?php esc_html_e( 'Export CSV', 'kw-performance' ); ?></a></p>
 
-	<div id="kwperf-log-action-result" class="notice" style="display:none;"></div>
+<div id="kwperf-log-action-result" class="notice" style="display:none;"></div>
 
-	<form method="get" id="kwperf-logs-filter-form">
-		<input type="hidden" name="page" value="<?php echo esc_attr( isset( $_REQUEST['page'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['page'] ) ) : 'kwperf-logs' ); ?>" />
-		<?php $list_table->search_box( __( 'Search Broken Links', 'kw-performance' ), 'kwperf-logs' ); ?>
-		<?php $list_table->display(); ?>
-	</form>
-</div>
+<form method="get" id="kwperf-logs-filter-form">
+	<input type="hidden" name="page" value="kwperf-settings" />
+	<input type="hidden" name="tab" value="logs" />
+	<?php $list_table->search_box( __( 'Search Broken Links', 'kw-performance' ), 'kwperf-logs' ); ?>
+	<?php $list_table->display(); ?>
+</form>

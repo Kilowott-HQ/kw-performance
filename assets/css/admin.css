@@ -2,6 +2,14 @@
  * KW Performance — admin styles.
  */
 
+.kwperf-wrap h1 .kwperf-version {
+	font-size: 13px;
+	font-weight: 400;
+	color: #646970;
+	margin-left: 8px;
+	vertical-align: middle;
+}
+
 .kwperf-wrap .kwperf-stat-cards {
 	display: flex;
 	flex-wrap: wrap;

@@ -18,11 +18,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 class KWPERF_Admin {
 
 	/**
-	 * Page hook suffixes registered by this plugin, used to scope asset loading.
+	 * This plugin's one page hook suffix, used to scope asset loading.
 	 *
-	 * @var string[]
+	 * @var string
 	 */
-	private $page_hooks = array();
+	private $page_hook = '';
+
+	/**
+	 * Tab keys for the single admin page mapped to their labels, in display
+	 * order.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function get_tabs() {
+		return array(
+			'settings' => __( 'Settings', 'kw-performance' ),
+			'history'  => __( 'Scan History', 'kw-performance' ),
+			'tracking' => __( 'Tracking', 'kw-performance' ),
+			'metas'    => __( 'Metas', 'kw-performance' ),
+			'logs'     => __( '404 Log', 'kw-performance' ),
+		);
+	}
 
 	/**
 	 * Hook registration.
@@ -30,128 +46,33 @@ class KWPERF_Admin {
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_menus' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_menu_flyout' ) );
 		add_action( 'admin_notices', array( $this, 'maybe_render_settings_notice' ) );
 		add_filter( 'plugin_action_links_' . KWPERF_PLUGIN_BASENAME, array( $this, 'add_settings_link' ) );
 	}
 
 	/**
-	 * Register the admin menu and submenus.
-	 *
-	 * All five pages live under the core Settings menu (as
-	 * options-general.php?page=... URLs) rather than a standalone top-level
-	 * icon. Only "KW Performance" itself is left visible directly in the
-	 * Settings fly-out; the other four are registered (so their pages,
-	 * capability checks, and URLs all still work) but immediately hidden
-	 * from that fly-out with remove_submenu_page() — enqueue_menu_flyout()
-	 * then re-attaches them as a nested fly-out off the "KW Performance"
-	 * item instead, since WordPress's admin menu has no native 3rd level.
+	 * Register the single admin menu entry, nested under the core Settings
+	 * menu. 404 Log, Metas, Tracking, and Scan History aren't separate pages
+	 * any more — they're tabs within this one page (see render_main_page()).
 	 */
 	public function register_menus() {
-		$this->page_hooks[] = add_submenu_page(
+		$this->page_hook = add_submenu_page(
 			'options-general.php',
 			__( 'KW Performance', 'kw-performance' ),
 			__( 'KW Performance', 'kw-performance' ),
 			'manage_options',
 			'kwperf-settings',
-			array( $this, 'render_settings_page' )
-		);
-
-		$this->page_hooks[] = add_submenu_page(
-			'options-general.php',
-			__( '404 Log', 'kw-performance' ),
-			__( '404 Log', 'kw-performance' ),
-			'manage_options',
-			'kwperf-logs',
-			array( $this, 'render_logs_page' )
-		);
-
-		$this->page_hooks[] = add_submenu_page(
-			'options-general.php',
-			__( 'Metas', 'kw-performance' ),
-			__( 'Metas', 'kw-performance' ),
-			'manage_options',
-			'kwperf-metas',
-			array( $this, 'render_metas_page' )
-		);
-
-		$this->page_hooks[] = add_submenu_page(
-			'options-general.php',
-			__( 'Tracking', 'kw-performance' ),
-			__( 'Tracking', 'kw-performance' ),
-			'manage_options',
-			'kwperf-tracking',
-			array( $this, 'render_tracking_page' )
-		);
-
-		$this->page_hooks[] = add_submenu_page(
-			'options-general.php',
-			__( 'Scan History', 'kw-performance' ),
-			__( 'Scan History', 'kw-performance' ),
-			'manage_options',
-			'kwperf-scan-history',
-			array( $this, 'render_scan_history_page' )
-		);
-
-		// Hidden from the Settings fly-out's own listing, not from the site —
-		// remove_submenu_page() only affects what's rendered in the sidebar;
-		// the page hooks registered above keep working via direct URL.
-		remove_submenu_page( 'options-general.php', 'kwperf-logs' );
-		remove_submenu_page( 'options-general.php', 'kwperf-metas' );
-		remove_submenu_page( 'options-general.php', 'kwperf-tracking' );
-		remove_submenu_page( 'options-general.php', 'kwperf-scan-history' );
-	}
-
-	/**
-	 * Enqueue the small always-on admin-wide script/style that turns the
-	 * "KW Performance" item inside the Settings fly-out into a trigger for
-	 * its own nested fly-out (404 Log / Metas / Tracking / Scan History).
-	 * Unlike enqueue_assets(), this runs on every wp-admin screen, since the
-	 * Settings fly-out itself is part of the persistent sidebar, not just
-	 * this plugin's own pages.
-	 */
-	public function enqueue_menu_flyout() {
-		wp_enqueue_style( 'kwperf-admin-menu', KWPERF_PLUGIN_URL . 'assets/css/admin-menu.css', array(), KWPERF_VERSION );
-		wp_enqueue_script( 'kwperf-admin-menu', KWPERF_PLUGIN_URL . 'assets/js/admin-menu.js', array(), KWPERF_VERSION, true );
-
-		wp_localize_script(
-			'kwperf-admin-menu',
-			'kwperfMenuFlyout',
-			array(
-				'triggerUrl' => admin_url( 'options-general.php?page=kwperf-settings' ),
-				'items'      => array(
-					array(
-						'label' => __( 'Settings', 'kw-performance' ),
-						'url'   => admin_url( 'options-general.php?page=kwperf-settings' ),
-					),
-					array(
-						'label' => __( '404 Log', 'kw-performance' ),
-						'url'   => admin_url( 'options-general.php?page=kwperf-logs' ),
-					),
-					array(
-						'label' => __( 'Metas', 'kw-performance' ),
-						'url'   => admin_url( 'options-general.php?page=kwperf-metas' ),
-					),
-					array(
-						'label' => __( 'Tracking', 'kw-performance' ),
-						'url'   => admin_url( 'options-general.php?page=kwperf-tracking' ),
-					),
-					array(
-						'label' => __( 'Scan History', 'kw-performance' ),
-						'url'   => admin_url( 'options-general.php?page=kwperf-scan-history' ),
-					),
-				),
-			)
+			array( $this, 'render_main_page' )
 		);
 	}
 
 	/**
-	 * Enqueue admin CSS/JS only on this plugin's own screens.
+	 * Enqueue admin CSS/JS only on this plugin's own screen.
 	 *
 	 * @param string $hook_suffix Current admin page hook suffix.
 	 */
 	public function enqueue_assets( $hook_suffix ) {
-		if ( ! in_array( $hook_suffix, $this->page_hooks, true ) ) {
+		if ( $hook_suffix !== $this->page_hook ) {
 			return;
 		}
 
@@ -192,9 +113,7 @@ class KWPERF_Admin {
 	 * Show a "settings saved" admin notice.
 	 */
 	public function maybe_render_settings_notice() {
-		$pages_with_settings = array( 'kwperf-settings', 'kwperf-tracking' );
-
-		if ( ! isset( $_GET['page'], $_GET['settings-updated'] ) || ! in_array( $_GET['page'], $pages_with_settings, true ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! isset( $_GET['page'], $_GET['settings-updated'] ) || 'kwperf-settings' !== $_GET['page'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return;
 		}
 
@@ -220,25 +139,35 @@ class KWPERF_Admin {
 	}
 
 	/**
-	 * Render the Settings screen.
+	 * Render the single admin page: capability-gate once, work out which tab
+	 * is active, then hand off to templates/main-page.php, which renders the
+	 * shared heading/tab-nav and calls the matching render_*_tab() method
+	 * below for the tab content itself.
 	 */
-	public function render_settings_page() {
+	public function render_main_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'kw-performance' ) );
 		}
 
+		$tabs       = self::get_tabs();
+		$requested  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$active_tab = array_key_exists( $requested, $tabs ) ? $requested : 'settings';
+
+		include KWPERF_PLUGIN_DIR . 'templates/main-page.php';
+	}
+
+	/**
+	 * Tab content: Settings.
+	 */
+	public function render_settings_tab() {
 		$stats = KWPERF_Logger::get_summary_stats();
 		include KWPERF_PLUGIN_DIR . 'templates/settings-page.php';
 	}
 
 	/**
-	 * Render the 404 Log screen.
+	 * Tab content: 404 Log.
 	 */
-	public function render_logs_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'kw-performance' ) );
-		}
-
+	public function render_logs_tab() {
 		$list_table = new KWPERF_Logs_List_Table();
 		$list_table->prepare_items();
 
@@ -246,13 +175,9 @@ class KWPERF_Admin {
 	}
 
 	/**
-	 * Render the Metas screen.
+	 * Tab content: Metas.
 	 */
-	public function render_metas_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'kw-performance' ) );
-		}
-
+	public function render_metas_tab() {
 		$post_types = (array) KWPERF_Settings::get( 'post_types', array( 'post', 'page' ) );
 		$post_types = array_values( array_filter( $post_types, 'post_type_exists' ) );
 		if ( empty( $post_types ) ) {
@@ -269,17 +194,17 @@ class KWPERF_Admin {
 		// Some custom post types are owned by other plugins whose own title/permalink
 		// filters can throw outside a normal front-end request. Row-level failures are
 		// already contained inside KWPERF_Metas_List_Table; this is the last-resort net
-		// so a failure anywhere else in this screen shows a readable message instead of
-		// a raw 500.
+		// so a failure anywhere else in this tab shows a readable message instead of a
+		// raw 500.
 		try {
 			$list_table = new KWPERF_Metas_List_Table( $current_type );
 			$list_table->prepare_items();
 
 			include KWPERF_PLUGIN_DIR . 'templates/metas-page.php';
 		} catch ( Throwable $e ) {
-			error_log( sprintf( 'KW Performance: Metas screen failed for post type %s: %s', $current_type, $e->getMessage() ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( sprintf( 'KW Performance: Metas tab failed for post type %s: %s', $current_type, $e->getMessage() ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
 			wp_die(
-				esc_html__( 'The Metas screen ran into an unexpected error for this post type, likely from another plugin that manages it. Check your site\'s error log for the details logged just before this message.', 'kw-performance' ),
+				esc_html__( 'The Metas tab ran into an unexpected error for this post type, likely from another plugin that manages it. Check your site\'s error log for the details logged just before this message.', 'kw-performance' ),
 				esc_html__( 'KW Performance — Metas', 'kw-performance' ),
 				array( 'back_link' => true )
 			);
@@ -287,24 +212,16 @@ class KWPERF_Admin {
 	}
 
 	/**
-	 * Render the Tracking screen.
+	 * Tab content: Tracking.
 	 */
-	public function render_tracking_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'kw-performance' ) );
-		}
-
+	public function render_tracking_tab() {
 		include KWPERF_PLUGIN_DIR . 'templates/tracking-page.php';
 	}
 
 	/**
-	 * Render the Scan History screen.
+	 * Tab content: Scan History.
 	 */
-	public function render_scan_history_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'kw-performance' ) );
-		}
-
+	public function render_history_tab() {
 		$list_table = new KWPERF_History_List_Table();
 		$list_table->prepare_items();
 

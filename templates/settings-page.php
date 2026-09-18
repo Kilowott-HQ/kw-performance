@@ -1,6 +1,6 @@
 <?php
 /**
- * Settings page template.
+ * Settings tab content.
  *
  * Expects: array $stats from KWPERF_Logger::get_summary_stats().
  *
@@ -17,10 +17,7 @@ $export_url = wp_nonce_url(
 	'kwperf_export_logs'
 );
 ?>
-<div class="wrap kwperf-wrap">
-	<h1><?php esc_html_e( 'KW Performance', 'kw-performance' ); ?></h1>
-
-	<?php settings_errors( KWPERF_Settings::OPTION_KEY ); ?>
+<?php settings_errors( KWPERF_Settings::OPTION_KEY ); ?>
 
 	<?php $last_email_error = get_option( 'kwperf_last_email_error' ); ?>
 	<?php if ( $last_email_error ) : ?>
@@ -89,4 +86,3 @@ $export_url = wp_nonce_url(
 		submit_button( __( 'Save Settings', 'kw-performance' ) );
 		?>
 	</form>
-</div>
