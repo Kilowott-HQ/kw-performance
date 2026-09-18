@@ -9,15 +9,15 @@ Automatically crawl your WordPress site's frontend, detect broken links (404s, 4
 
 ## Features
 
-- Crawls published pages, posts, custom post types, and post type archives.
+- Crawls published *and draft* pages, posts, custom post types, and post type archives. Published content is fetched live over HTTP like a real visitor would see it; drafts have no publicly reachable URL, so their own content is scanned directly instead (this only catches links inside the draft's own content — not theme chrome like the header/footer/sidebar, since there's no real rendered page yet).
 - Extracts every `<a href>` on the rendered page (ignoring `mailto:`, `tel:`, `javascript:`, `#anchor`, and empty links).
 - Validates each unique URL once per scan (deduplicated) using the WordPress HTTP API, manually following redirects to report the full chain (301/302/307/308), the final URL, and the final HTTP status.
 - Flags 404, 410, 5xx responses, connection errors/timeouts, and redirect loops as broken.
 - Detects the DOM context of every broken link: nearest ancestor CSS class/ID, all ancestor classes, and Gutenberg (`wp-block-*`) / Elementor (`elementor-widget-*`) markers when present.
 - Stores results in a dedicated database table (`{prefix}kwperf_logs`) with detection counts, first/last seen timestamps, and auto-removes rows for links that are no longer broken on the next scan.
 - Scheduled scanning via WP-Cron (hourly / twice daily / daily / weekly), with a manual "Run Scan Now" AJAX button and a progress indicator.
-- HTML email report sent to one or more configurable admin addresses (comma-separated) after each scheduled scan when broken links are found (optionally even when none are found).
-- Optional Slack notifications via an Incoming Webhook — same trigger as email, with a "Send Test Notification" button that checks the webhook before you save.
+- HTML email report sent to one or more configurable admin addresses (comma-separated) after each scheduled scan when broken links are found (optionally even when none are found). Lists every broken link found in that scan — the same set that lands in the 404 Log.
+- Optional Slack notifications via an Incoming Webhook — same trigger as email, built from the exact same scan results, with a "Send Test Notification" button that checks the webhook before you save. The detailed list isn't capped at a fixed count the way it used to be; it only stops early if Slack's own 3,000-character block limit is actually reached (rare, and shown as "…and N more." when it happens), so email and Slack normally show the same links.
 - Searchable, sortable, paginated 404 Log admin screen built on `WP_List_Table`, with filtering by status type, CSV export, single/bulk delete, and single/bulk/"recheck all" re-validation.
 - **Metas** screen: a tab per configured post type listing its published entries with Page Title, Page Link, Meta Title, and Meta Description, edited inline and saved live. Reads/writes Yoast SEO (`_yoast_wpseo_title` / `_yoast_wpseo_metadesc`) or Rank Math (`rank_math_title` / `rank_math_description`) meta when one of those plugins is active, or its own post meta as a fallback when neither is installed. "Download PDF" exports the current tab (respecting the active search) as a styled report matching the companion Security Dashboard's own PDF exports.
 - **Tracking** screen: all analytics/tracking on the site is done through Google Tag Manager — enter one or more GTM container IDs and choose how the container code is placed (Footer, Custom, Codeless injection, or Off — data layer only). No other analytics integrations are built in; everything else is configured inside GTM itself.

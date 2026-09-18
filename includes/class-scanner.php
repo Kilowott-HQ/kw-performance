@@ -77,7 +77,7 @@ class KWPERF_Scanner {
 		$this->update_progress( 0, $total_pages );
 
 		foreach ( $pages as $index => $page ) {
-			$this->scan_page( $page['url'], $page['id'], $page['title'] );
+			$this->scan_page( $page['url'], $page['id'], $page['title'], $page['status'] );
 			$this->update_progress( $index + 1, $total_pages );
 		}
 
@@ -219,8 +219,10 @@ class KWPERF_Scanner {
 
 	/**
 	 * Build the list of frontend URLs to crawl based on configured post types.
+	 * Includes both published and draft posts, since drafts have no publicly
+	 * fetchable URL and so need a different scan strategy — see scan_page().
 	 *
-	 * @return array List of arrays with 'id', 'url', 'title'.
+	 * @return array List of arrays with 'id', 'url', 'title', 'status'.
 	 */
 	private function get_pages_to_scan() {
 		$pages      = array();
@@ -228,9 +230,10 @@ class KWPERF_Scanner {
 
 		// Front page.
 		$pages[] = array(
-			'id'    => (int) get_option( 'page_on_front' ),
-			'url'   => home_url( '/' ),
-			'title' => __( 'Home', 'kw-performance' ),
+			'id'     => (int) get_option( 'page_on_front' ),
+			'url'    => home_url( '/' ),
+			'title'  => __( 'Home', 'kw-performance' ),
+			'status' => 'publish',
 		);
 
 		foreach ( $post_types as $post_type ) {
@@ -241,7 +244,7 @@ class KWPERF_Scanner {
 			$query = new WP_Query(
 				array(
 					'post_type'              => $post_type,
-					'post_status'            => 'publish',
+					'post_status'            => array( 'publish', 'draft' ),
 					'posts_per_page'         => -1,
 					'fields'                 => 'ids',
 					'no_found_rows'          => true,
@@ -256,9 +259,10 @@ class KWPERF_Scanner {
 					continue;
 				}
 				$pages[] = array(
-					'id'    => $post_id,
-					'url'   => $permalink,
-					'title' => get_the_title( $post_id ),
+					'id'     => $post_id,
+					'url'    => $permalink,
+					'title'  => get_the_title( $post_id ),
+					'status' => get_post_status( $post_id ),
 				);
 			}
 
@@ -268,9 +272,10 @@ class KWPERF_Scanner {
 					$archive_link = get_post_type_archive_link( $post_type );
 					if ( $archive_link ) {
 						$pages[] = array(
-							'id'    => 0,
-							'url'   => $archive_link,
-							'title' => $post_type_object->labels->name,
+							'id'     => 0,
+							'url'    => $archive_link,
+							'title'  => $post_type_object->labels->name,
+							'status' => 'publish',
 						);
 					}
 				}
@@ -286,13 +291,22 @@ class KWPERF_Scanner {
 	}
 
 	/**
-	 * Fetch and scan a single frontend page for broken links.
+	 * Scan a single page for broken links, using whichever strategy its
+	 * publication status allows.
 	 *
-	 * @param string $url   Page URL to fetch.
-	 * @param int    $id    Post ID (0 for non-post pages).
-	 * @param string $title Page title.
+	 * @param string $url    Page URL (used to fetch published pages, and to
+	 *                       resolve relative links / identify the source for
+	 *                       drafts).
+	 * @param int    $id     Post ID (0 for non-post pages, always 'publish').
+	 * @param string $title  Page title.
+	 * @param string $status Post status ('publish', 'draft', ...).
 	 */
-	private function scan_page( $url, $id, $title ) {
+	private function scan_page( $url, $id, $title, $status = 'publish' ) {
+		if ( 'publish' !== $status ) {
+			$this->scan_unpublished_page( $url, $id, $title );
+			return;
+		}
+
 		// Fetching and rendering a full page (theme, widgets, DB queries) is
 		// inherently slower than a single link-status check, so give it a more
 		// generous timeout than the per-link setting, plus one retry — a slow
@@ -329,8 +343,52 @@ class KWPERF_Scanner {
 
 		++$this->stats['pages_scanned'];
 
-		$links = $this->extract_links( $body, $url );
+		$this->process_links( $this->extract_links( $body, $url ), $id, $url, $title );
+	}
 
+	/**
+	 * Scan a not-yet-published post (currently just 'draft') by rendering its
+	 * own content directly instead of fetching it over HTTP. An unauthenticated
+	 * request to a draft's URL hits WordPress's own "you don't have permission"
+	 * page rather than the real content, so an HTTP fetch would never actually
+	 * see its links. This only sees links inside the post's own content — not
+	 * theme chrome (header/footer/sidebar) the way a published-page fetch does,
+	 * since there is no real rendered page to fetch yet.
+	 *
+	 * @param string $url   The post's eventual permalink — not fetched, only
+	 *                      used to resolve relative links and as the logged
+	 *                      source URL.
+	 * @param int    $id    Post ID.
+	 * @param string $title Page title.
+	 */
+	private function scan_unpublished_page( $url, $id, $title ) {
+		$post = get_post( $id );
+
+		if ( ! $post || '' === trim( (string) $post->post_content ) ) {
+			return;
+		}
+
+		$content = apply_filters( 'the_content', $post->post_content );
+		if ( '' === trim( $content ) ) {
+			return;
+		}
+
+		++$this->stats['pages_scanned'];
+
+		$this->process_links( $this->extract_links( $content, $url ), $id, $url, $title );
+	}
+
+	/**
+	 * Validate a batch of extracted links and record any that are broken.
+	 * Shared by both the published (HTTP-fetched) and draft (content-only)
+	 * scan paths so a broken link is recorded identically either way.
+	 *
+	 * @param array  $links Extracted link descriptors from extract_links().
+	 * @param int    $id    Source post ID.
+	 * @param string $url   Source page URL.
+	 * @param string $title Source page title.
+	 */
+	private function process_links( $links, $id, $url, $title ) {
 		foreach ( $links as $link ) {
 			++$this->stats['links_scanned'];
 

@@ -19,13 +19,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 class KWPERF_Slack {
 
 	/**
-	 * Maximum number of individual broken links listed in one Slack message.
-	 *
-	 * @var int
-	 */
-	const MAX_LISTED_LINKS = 10;
-
-	/**
 	 * Option used to surface the last scan-report send failure on the
 	 * settings page, since cron and manual scans don't otherwise show
 	 * the caller anything if the Slack post fails.
@@ -172,7 +165,11 @@ class KWPERF_Slack {
 			$listed             = 0;
 			$running_length     = 0;
 
-			foreach ( array_slice( $groups, 0, self::MAX_LISTED_LINKS ) as $group ) {
+			// No separate count-based cap here — every group is offered a chance
+			// to be listed (matching the email report, which lists all of them),
+			// and only Slack's own 3000-character block limit below decides
+			// where the list actually has to stop.
+			foreach ( $groups as $group ) {
 				$found_on_lines = array();
 
 				// The same broken link commonly appears on more than one page (e.g. a
