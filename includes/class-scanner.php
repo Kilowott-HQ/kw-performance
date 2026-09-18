@@ -60,6 +60,7 @@ class KWPERF_Scanner {
 
 		$start_time  = microtime( true );
 		$scan_start  = current_time( 'mysql' );
+		$scan_id     = wp_generate_uuid4();
 
 		$this->url_cache          = array();
 		$this->stats              = array(
@@ -83,11 +84,11 @@ class KWPERF_Scanner {
 
 		// Persist broken link occurrences (insert new / update existing detection counts).
 		foreach ( $this->broken_occurrences as $occurrence ) {
-			KWPERF_Logger::upsert_log( $occurrence );
+			KWPERF_Logger::upsert_log( $occurrence, $scan_id );
 		}
 
 		// Remove log rows that were not re-confirmed as broken in this run (i.e. resolved issues).
-		KWPERF_Logger::purge_stale_logs( $scan_start );
+		KWPERF_Logger::purge_stale_logs( $scan_id );
 
 		$duration = round( microtime( true ) - $start_time, 2 );
 

@@ -22,10 +22,12 @@ class KWPERF_Logger {
 	 * counters/timestamp if the same broken URL was already logged for the
 	 * same source page.
 	 *
-	 * @param array $data Occurrence data from the scanner.
+	 * @param array  $data    Occurrence data from the scanner.
+	 * @param string $scan_id Unique ID for the scan run this occurrence was
+	 *                        found in (see purge_stale_logs()).
 	 * @return int Log row ID.
 	 */
-	public static function upsert_log( $data ) {
+	public static function upsert_log( $data, $scan_id = '' ) {
 		global $wpdb;
 
 		$table = KWPERF_Database::logs_table();
@@ -42,7 +44,7 @@ class KWPERF_Logger {
 		if ( $existing_id ) {
 			$wpdb->query(
 				$wpdb->prepare(
-					"UPDATE {$table} SET final_url = %s, http_status = %d, redirect_status = %s, redirect_count = %d, section = %s, css_class = %s, link_text = %s, source_permalink = %s, source_title = %s, last_checked = %s, detection_count = detection_count + 1 WHERE id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+					"UPDATE {$table} SET final_url = %s, http_status = %d, redirect_status = %s, redirect_count = %d, section = %s, css_class = %s, link_text = %s, source_permalink = %s, source_title = %s, last_checked = %s, last_scan_id = %s, detection_count = detection_count + 1 WHERE id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 					$data['final_url'],
 					$data['http_status'],
 					$data['redirect_status'],
@@ -53,6 +55,7 @@ class KWPERF_Logger {
 					$data['source_permalink'],
 					$data['source_title'],
 					$now,
+					$scan_id,
 					$existing_id
 				)
 			);
@@ -77,29 +80,37 @@ class KWPERF_Logger {
 				'status'           => 'broken',
 				'first_detected'   => $now,
 				'last_checked'     => $now,
+				'last_scan_id'     => $scan_id,
 				'detection_count'  => 1,
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d' )
+			array( '%d', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d' )
 		);
 
 		return (int) $wpdb->insert_id;
 	}
 
 	/**
-	 * Delete log rows that were not refreshed since the given scan start time.
-	 * These represent previously-broken links that are now resolved.
+	 * Delete every log row that wasn't reconfirmed by the given scan run —
+	 * these represent previously-broken links that are now resolved.
 	 *
-	 * @param string $scan_start MySQL datetime string marking scan start.
+	 * Matches on an exact scan-run ID rather than comparing last_checked
+	 * against the scan's start time: MySQL's DATETIME columns only have
+	 * second-level precision, so two scans completing within the same
+	 * second could make a now-fixed link's last_checked compare equal to
+	 * (not less than) the new scan's start time and never get purged. An ID
+	 * match has no such edge case.
+	 *
+	 * @param string $scan_id Unique ID for the scan run that just completed.
 	 */
-	public static function purge_stale_logs( $scan_start ) {
+	public static function purge_stale_logs( $scan_id ) {
 		global $wpdb;
 
 		$table = KWPERF_Database::logs_table();
 
 		$wpdb->query(
 			$wpdb->prepare(
-				"DELETE FROM {$table} WHERE last_checked < %s", // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-				$scan_start
+				"DELETE FROM {$table} WHERE last_scan_id != %s", // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				$scan_id
 			)
 		);
 	}

@@ -14,7 +14,7 @@ Automatically crawl your WordPress site's frontend, detect broken links (404s, 4
 - Validates each unique URL once per scan (deduplicated) using the WordPress HTTP API, manually following redirects to report the full chain (301/302/307/308), the final URL, and the final HTTP status.
 - Flags 404, 410, 5xx responses, connection errors/timeouts, and redirect loops as broken.
 - Detects the DOM context of every broken link: nearest ancestor CSS class/ID, all ancestor classes, and Gutenberg (`wp-block-*`) / Elementor (`elementor-widget-*`) markers when present.
-- Stores results in a dedicated database table (`{prefix}kwperf_logs`) with detection counts, first/last seen timestamps, and auto-removes rows for links that are no longer broken on the next scan.
+- Stores results in a dedicated database table (`{prefix}kwperf_logs`) with detection counts, first/last seen timestamps, and auto-removes rows for links that are no longer broken on the next scan — matched by a unique ID for that scan run rather than a timestamp comparison, so a fixed link is reliably removed even if two scans complete within the same second.
 - Scheduled scanning via WP-Cron (hourly / twice daily / daily / weekly), with a manual "Run Scan Now" AJAX button and a progress indicator.
 - HTML email report sent to one or more configurable admin addresses (comma-separated) after each scheduled scan when broken links are found (optionally even when none are found). Lists every broken link found in that scan — the same set that lands in the 404 Log.
 - Optional Slack notifications via an Incoming Webhook — same trigger as email, built from the exact same scan results, with a "Send Test Notification" button that checks the webhook before you save. The detailed list isn't capped at a fixed count the way it used to be; it only stops early if Slack's own 3,000-character block limit is actually reached (rare, and shown as "…and N more." when it happens), so email and Slack normally show the same links.
@@ -51,7 +51,7 @@ The **Settings** tab lets you:
 
 - Enable/disable scheduled scanning and choose the interval.
 - Set the notification email address(es) — comma-separate multiple addresses (defaults to the site admin email).
-- Choose whether to be notified even when a scan finds nothing broken (applies to both email and Slack).
+- Choose whether to be notified even when a scan finds nothing broken (applies to both email and Slack) — combined with a Weekly scan interval, this is how to get a standing "no broken links this week" summary rather than only ever hearing about problems.
 - Choose which public post types are crawled.
 - Enable Slack notifications and paste an [Incoming Webhook](https://api.slack.com/apps) URL, then confirm it works with "Send Test Notification" before saving.
 - Run an on-demand scan ("Run Scan Now") with a live progress bar — a second scan cannot be started while one is already running.

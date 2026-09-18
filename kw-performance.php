@@ -3,7 +3,7 @@
  * Plugin Name:       KW Performance
  * Plugin URI:        https://kilowott.com
  * Description:       Automatically crawls your frontend pages, posts, and custom post types to detect broken links (404s, 410s, broken redirects, and server errors), logs them with page/section context, notifies admins on a schedule, provides an inline meta title/description editor synced with Yoast SEO or Rank Math, and configures Google Tag Manager tracking.
- * Version:           26.09.12
+ * Version:           26.09.13
  * Requires at least: 5.8
  * Requires PHP:      8.0
  * Author:            KW Developers
@@ -22,12 +22,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants.
-define( 'KWPERF_VERSION', '26.09.12' );
+define( 'KWPERF_VERSION', '26.09.13' );
 define( 'KWPERF_PLUGIN_FILE', __FILE__ );
 define( 'KWPERF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'KWPERF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'KWPERF_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-define( 'KWPERF_DB_VERSION', '1.0.0' );
+define( 'KWPERF_DB_VERSION', '1.1.0' );
 
 /**
  * Autoload plugin classes on demand.

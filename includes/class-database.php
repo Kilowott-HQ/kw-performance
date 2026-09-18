@@ -43,6 +43,14 @@ class KWPERF_Database {
 	 * Create (or upgrade) the custom database tables.
 	 *
 	 * Uses dbDelta so this is safe to call on every activation/upgrade.
+	 *
+	 * last_scan_id identifies which scan run last confirmed a row as broken —
+	 * purge_stale_logs() deletes every row whose last_scan_id doesn't match
+	 * the current run, instead of comparing last_checked against the scan's
+	 * start time. The timestamp comparison used to fail (leaving fixed links
+	 * behind in the log) whenever two scans completed within the same
+	 * second, since MySQL DATETIME only has second-level precision — an
+	 * exact ID match has no such edge case.
 	 */
 	public static function create_tables() {
 		global $wpdb;
@@ -70,11 +78,13 @@ class KWPERF_Database {
 			first_detected DATETIME NOT NULL,
 			last_checked DATETIME NOT NULL,
 			detection_count INT UNSIGNED NOT NULL DEFAULT 1,
+			last_scan_id VARCHAR(36) NOT NULL DEFAULT '',
 			PRIMARY KEY  (id),
 			KEY source_page_id (source_page_id),
 			KEY http_status (http_status),
 			KEY status (status),
-			KEY broken_url (broken_url(191))
+			KEY broken_url (broken_url(191)),
+			KEY last_scan_id (last_scan_id)
 		) {$charset_collate};";
 
 		$sql_history = "CREATE TABLE {$history_table} (

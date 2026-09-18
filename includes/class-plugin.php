@@ -98,6 +98,8 @@ class KWPERF_Plugin {
 	 * Instantiate collaborating classes once all plugins have loaded.
 	 */
 	public function init_subsystems() {
+		$this->maybe_upgrade_db();
+
 		$this->settings = new KWPERF_Settings();
 		$this->cron     = new KWPERF_Cron();
 		$this->ajax     = new KWPERF_Ajax();
@@ -106,6 +108,19 @@ class KWPERF_Plugin {
 
 		if ( is_admin() ) {
 			$this->admin = new KWPERF_Admin();
+		}
+	}
+
+	/**
+	 * Re-run dbDelta when the plugin's own files are updated in place (a
+	 * normal auto-update never fires the activation hook, only a genuine
+	 * deactivate/reactivate does), so schema changes — like the last_scan_id
+	 * column added for accurate stale-log purging — reach existing installs
+	 * too, not just fresh ones.
+	 */
+	private function maybe_upgrade_db() {
+		if ( get_option( 'kwperf_db_version' ) !== KWPERF_DB_VERSION ) {
+			KWPERF_Database::create_tables();
 		}
 	}
 
