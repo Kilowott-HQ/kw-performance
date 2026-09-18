@@ -53,15 +53,30 @@ class KWPERF_History_List_Table extends WP_List_Table {
 	}
 
 	/**
-	 * Scan date column.
+	 * Scan date column, always shown in IST (Asia/Kolkata) regardless of the
+	 * site's own configured timezone.
 	 *
 	 * @param array $item Row data.
 	 * @return string
 	 */
 	public function column_scan_date( $item ) {
-		return esc_html(
-			mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $item['scan_date'] )
-		);
+		// $item['scan_date'] is a naive datetime string in the site's own
+		// configured timezone (it comes from current_time('mysql')), so it
+		// has to be anchored to that timezone before converting to IST —
+		// otherwise the conversion would be off by whatever the difference
+		// between the site's timezone and IST is.
+		try {
+			$date = new DateTime( $item['scan_date'], wp_timezone() );
+			$date->setTimezone( new DateTimeZone( 'Asia/Kolkata' ) );
+
+			return esc_html(
+				$date->format( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) ) . ' IST'
+			);
+		} catch ( Exception $e ) {
+			return esc_html(
+				mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $item['scan_date'] )
+			);
+		}
 	}
 
 	/**

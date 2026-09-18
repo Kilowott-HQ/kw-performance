@@ -105,7 +105,7 @@ The **Tracking** tab configures Google Tag Manager, the only tracking mechanism 
 
 ### Scan History
 
-The **Scan History** tab shows every completed scan (manual or scheduled) with its date, duration, pages/links scanned, broken/working counts, and any fetch errors encountered.
+The **Scan History** tab shows every completed scan (manual or scheduled) with its date, duration, pages/links scanned, broken/working counts, and any fetch errors encountered. Dates are always shown in IST (Asia/Kolkata), regardless of the site's own configured timezone.
 
 ## Database Schema
 
