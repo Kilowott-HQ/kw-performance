@@ -1,0 +1,58 @@
+/**
+ * KW Performance — nested fly-out for the "KW Performance" item inside the
+ * core Settings menu, showing 404 Log / Metas / Tracking / Scan History.
+ * Colors are set inline by admin-menu.js to match the active admin color
+ * scheme rather than being hardcoded here.
+ */
+
+#adminmenu .kwperf-has-flyout {
+	position: relative;
+}
+
+#adminmenu .kwperf-has-flyout > a::after {
+	content: "";
+	position: absolute;
+	right: 8px;
+	top: 50%;
+	margin-top: -3px;
+	border-top: 4px solid transparent;
+	border-bottom: 4px solid transparent;
+	border-left: 4px solid currentColor;
+	opacity: 0.75;
+}
+
+#adminmenu .kwperf-submenu-flyout {
+	display: none;
+	position: absolute;
+	top: 0;
+	left: 100%;
+	min-width: 160px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	z-index: 9999;
+	box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.25);
+}
+
+#adminmenu .kwperf-has-flyout:hover > .kwperf-submenu-flyout,
+#adminmenu .kwperf-has-flyout:focus-within > .kwperf-submenu-flyout {
+	display: block;
+}
+
+#adminmenu .kwperf-submenu-flyout li {
+	margin: 0;
+	padding: 0;
+}
+
+#adminmenu .kwperf-submenu-flyout li a {
+	display: block;
+	padding: 5px 12px;
+	white-space: nowrap;
+	text-decoration: none;
+	color: inherit;
+}
+
+#adminmenu .kwperf-submenu-flyout li a:hover,
+#adminmenu .kwperf-submenu-flyout li a:focus {
+	text-decoration: underline;
+}

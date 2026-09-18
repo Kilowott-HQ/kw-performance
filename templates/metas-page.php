@@ -49,7 +49,7 @@ $pdf_export_url = wp_nonce_url(
 					'page'             => 'kwperf-metas',
 					'kwperf_post_type' => $type,
 				),
-				admin_url( 'admin.php' )
+				admin_url( 'options-general.php' )
 			);
 			?>
 			<a href="<?php echo esc_url( $tab_url ); ?>" class="nav-tab <?php echo $type === $current_type ? 'nav-tab-active' : ''; ?>">

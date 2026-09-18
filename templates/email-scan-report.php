@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $site_name  = wp_specialchars_decode( get_bloginfo( 'name' ) );
 $scan_date  = mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $summary['scan_date'] );
-$logs_url   = admin_url( 'admin.php?page=kwperf-logs' );
+$logs_url   = admin_url( 'options-general.php?page=kwperf-logs' );
 ?>
 <!DOCTYPE html>
 <html>

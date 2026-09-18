@@ -30,35 +30,35 @@ class KWPERF_Admin {
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_menus' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_menu_flyout' ) );
 		add_action( 'admin_notices', array( $this, 'maybe_render_settings_notice' ) );
 		add_filter( 'plugin_action_links_' . KWPERF_PLUGIN_BASENAME, array( $this, 'add_settings_link' ) );
 	}
 
 	/**
 	 * Register the admin menu and submenus.
+	 *
+	 * All five pages live under the core Settings menu (as
+	 * options-general.php?page=... URLs) rather than a standalone top-level
+	 * icon. Only "KW Performance" itself is left visible directly in the
+	 * Settings fly-out; the other four are registered (so their pages,
+	 * capability checks, and URLs all still work) but immediately hidden
+	 * from that fly-out with remove_submenu_page() — enqueue_menu_flyout()
+	 * then re-attaches them as a nested fly-out off the "KW Performance"
+	 * item instead, since WordPress's admin menu has no native 3rd level.
 	 */
 	public function register_menus() {
-		$this->page_hooks[] = add_menu_page(
-			__( 'KW Performance', 'kw-performance' ),
-			__( 'KW Performance', 'kw-performance' ),
-			'manage_options',
-			'kwperf-settings',
-			array( $this, 'render_settings_page' ),
-			'dashicons-editor-unlink',
-			80
-		);
-
 		$this->page_hooks[] = add_submenu_page(
-			'kwperf-settings',
-			__( 'Settings', 'kw-performance' ),
-			__( 'Settings', 'kw-performance' ),
+			'options-general.php',
+			__( 'KW Performance', 'kw-performance' ),
+			__( 'KW Performance', 'kw-performance' ),
 			'manage_options',
 			'kwperf-settings',
 			array( $this, 'render_settings_page' )
 		);
 
 		$this->page_hooks[] = add_submenu_page(
-			'kwperf-settings',
+			'options-general.php',
 			__( '404 Log', 'kw-performance' ),
 			__( '404 Log', 'kw-performance' ),
 			'manage_options',
@@ -67,7 +67,7 @@ class KWPERF_Admin {
 		);
 
 		$this->page_hooks[] = add_submenu_page(
-			'kwperf-settings',
+			'options-general.php',
 			__( 'Metas', 'kw-performance' ),
 			__( 'Metas', 'kw-performance' ),
 			'manage_options',
@@ -76,7 +76,7 @@ class KWPERF_Admin {
 		);
 
 		$this->page_hooks[] = add_submenu_page(
-			'kwperf-settings',
+			'options-general.php',
 			__( 'Tracking', 'kw-performance' ),
 			__( 'Tracking', 'kw-performance' ),
 			'manage_options',
@@ -85,12 +85,63 @@ class KWPERF_Admin {
 		);
 
 		$this->page_hooks[] = add_submenu_page(
-			'kwperf-settings',
+			'options-general.php',
 			__( 'Scan History', 'kw-performance' ),
 			__( 'Scan History', 'kw-performance' ),
 			'manage_options',
 			'kwperf-scan-history',
 			array( $this, 'render_scan_history_page' )
+		);
+
+		// Hidden from the Settings fly-out's own listing, not from the site —
+		// remove_submenu_page() only affects what's rendered in the sidebar;
+		// the page hooks registered above keep working via direct URL.
+		remove_submenu_page( 'options-general.php', 'kwperf-logs' );
+		remove_submenu_page( 'options-general.php', 'kwperf-metas' );
+		remove_submenu_page( 'options-general.php', 'kwperf-tracking' );
+		remove_submenu_page( 'options-general.php', 'kwperf-scan-history' );
+	}
+
+	/**
+	 * Enqueue the small always-on admin-wide script/style that turns the
+	 * "KW Performance" item inside the Settings fly-out into a trigger for
+	 * its own nested fly-out (404 Log / Metas / Tracking / Scan History).
+	 * Unlike enqueue_assets(), this runs on every wp-admin screen, since the
+	 * Settings fly-out itself is part of the persistent sidebar, not just
+	 * this plugin's own pages.
+	 */
+	public function enqueue_menu_flyout() {
+		wp_enqueue_style( 'kwperf-admin-menu', KWPERF_PLUGIN_URL . 'assets/css/admin-menu.css', array(), KWPERF_VERSION );
+		wp_enqueue_script( 'kwperf-admin-menu', KWPERF_PLUGIN_URL . 'assets/js/admin-menu.js', array(), KWPERF_VERSION, true );
+
+		wp_localize_script(
+			'kwperf-admin-menu',
+			'kwperfMenuFlyout',
+			array(
+				'triggerUrl' => admin_url( 'options-general.php?page=kwperf-settings' ),
+				'items'      => array(
+					array(
+						'label' => __( 'Settings', 'kw-performance' ),
+						'url'   => admin_url( 'options-general.php?page=kwperf-settings' ),
+					),
+					array(
+						'label' => __( '404 Log', 'kw-performance' ),
+						'url'   => admin_url( 'options-general.php?page=kwperf-logs' ),
+					),
+					array(
+						'label' => __( 'Metas', 'kw-performance' ),
+						'url'   => admin_url( 'options-general.php?page=kwperf-metas' ),
+					),
+					array(
+						'label' => __( 'Tracking', 'kw-performance' ),
+						'url'   => admin_url( 'options-general.php?page=kwperf-tracking' ),
+					),
+					array(
+						'label' => __( 'Scan History', 'kw-performance' ),
+						'url'   => admin_url( 'options-general.php?page=kwperf-scan-history' ),
+					),
+				),
+			)
 		);
 	}
 
@@ -159,7 +210,7 @@ class KWPERF_Admin {
 	public function add_settings_link( $links ) {
 		$settings_link = sprintf(
 			'<a href="%s">%s</a>',
-			esc_url( admin_url( 'admin.php?page=kwperf-settings' ) ),
+			esc_url( admin_url( 'options-general.php?page=kwperf-settings' ) ),
 			esc_html__( 'Settings', 'kw-performance' )
 		);
 
