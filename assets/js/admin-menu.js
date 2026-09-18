@@ -32,13 +32,10 @@
 		// inside Settings' own fly-out — not, say, a matching link elsewhere.
 		var candidates = adminMenu.querySelectorAll( 'a[href*="page=kwperf-settings"]' );
 		var triggerLink = null;
-		var parentSubmenu = null;
 
 		for ( var i = 0; i < candidates.length; i++ ) {
-			var submenu = candidates[ i ].closest( '.wp-submenu' );
-			if ( submenu ) {
+			if ( candidates[ i ].closest( '.wp-submenu' ) ) {
 				triggerLink = candidates[ i ];
-				parentSubmenu = submenu;
 				break;
 			}
 		}
@@ -52,8 +49,14 @@
 			return; // Nowhere to attach to, or already set up.
 		}
 
+		// wp-submenu/wp-submenu-wrap are WordPress's own classes — reusing
+		// them gives this fly-out WordPress's exact default look (colors,
+		// padding, hover states) and keeps it matching whatever admin color
+		// scheme is active, with no styling of our own needed.
+		// kwperf-submenu-flyout only carries the positioning admin-menu.css
+		// adds for a fly-out nested this one level deeper than usual.
 		var flyout = document.createElement( 'ul' );
-		flyout.className = 'kwperf-submenu-flyout';
+		flyout.className = 'wp-submenu wp-submenu-wrap kwperf-submenu-flyout';
 
 		settings.items.forEach( function ( item ) {
 			var li = document.createElement( 'li' );
@@ -63,14 +66,6 @@
 			li.appendChild( a );
 			flyout.appendChild( li );
 		} );
-
-		// Match whatever admin color scheme is active instead of hardcoding
-		// colors that would only look right in the default one.
-		if ( parentSubmenu && window.getComputedStyle ) {
-			var computed = window.getComputedStyle( parentSubmenu );
-			flyout.style.backgroundColor = computed.backgroundColor;
-			flyout.style.color = computed.color;
-		}
 
 		triggerLi.classList.add( 'kwperf-has-flyout' );
 		triggerLi.appendChild( flyout );
