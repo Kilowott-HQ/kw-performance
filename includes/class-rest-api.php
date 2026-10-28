@@ -25,11 +25,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class KWPERF_Rest_Api {
 
 	/**
-	 * PEM-encoded RSA public key. Safe to embed here: it can only verify
-	 * signatures, never produce them — the matching private key stays on
-	 * the dashboard's own server and is never shared with any site.
+	 * PEM-encoded RSA public keys currently accepted. Safe to embed here:
+	 * each one can only verify signatures, never produce them — the
+	 * matching private key stays on the dashboard's own server and is
+	 * never shared with any site. Normally holds exactly one entry; during
+	 * a rotation the new key is added alongside the old one here first so
+	 * a site accepts either while the fleet updates, instead of every site
+	 * needing the new key in place the instant the dashboard switches over.
+	 * Keep in sync with the sibling KW Security plugin's own copy of this
+	 * same list (classes/dashboard-signature.php) — same keypair(s).
 	 */
-	const DASHBOARD_PUBLIC_KEY = <<<'PEM'
+	const DASHBOARD_PUBLIC_KEYS = array(
+		<<<'PEM'
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjtG3XkYTGtr3YoN5/BgJ
 OHXBKcHKaY90xyw/6zxRFTHxVwGGCGqm1MGhcx/9EHHPNKJzBTzFSrzUY46Pc9lE
@@ -39,7 +46,21 @@ UirIbOYn69OyNWoxqG7AwwoKwXvun6WSONnnRC3btH88D1hKq3oAMALp0zHw8Fkc
 Grty7dMqCwbdNKtwr9GL2i7Ve8YrhNCt7uT4NEhbi2JXnXDIqxBQwVumXsJ1taPx
 YQIDAQAB
 -----END PUBLIC KEY-----
-PEM;
+PEM,
+		// New key generated 2026-10-28 for the planned rotation — not yet
+		// live on the dashboard side.
+		<<<'PEM'
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtq7XOTRn41HWuMsCj663
+jVO0IHhndkJFJ4jfQ9hsAgN13MUxkTs2HEX9EPJkJdtmEWlv21LjyvmJwHatpZzN
+LNr52w/G9QfgP2dJ97q92xxrHt3yeREH4BZEsCxIsN/pZv09YW2GuRYR3C+ijgtu
+6/SdkGMsjWI7Ne1L6v1DD7F8Y6ZUvU43d5e3lN7jeEmwETF98WP0KQxjRYcswSl2
+X2IZi1rognB+i1JFQho6tWyqaQN3vW531dj+2rV5oZ2kkmV9HUsjRkXT0tOHQXzm
+87zguDXN+ODvViXKOGfiu47mmx+cGtt67rkgCeNHgFRZvVhvwQyqj1VAVnA0XmwL
+VwIDAQAB
+-----END PUBLIC KEY-----
+PEM,
+	);
 
 	/**
 	 * How long a signature stays valid for, in seconds — bounds how long a
@@ -142,14 +163,20 @@ PEM;
 			return new WP_Error( 'kwperf_expired', 'Signature expired', array( 'status' => 403 ) );
 		}
 
-		$message = "{$installation_id}|{$topic}|{$timestamp}";
-		$valid   = openssl_verify( $message, base64_decode( $signature ), self::DASHBOARD_PUBLIC_KEY, OPENSSL_ALGO_SHA256 );
+		$message   = "{$installation_id}|{$topic}|{$timestamp}";
+		$sig_bytes = base64_decode( $signature, true );
 
-		if ( 1 !== $valid ) {
+		if ( false === $sig_bytes ) {
 			return new WP_Error( 'kwperf_invalid_signature', 'Invalid signature', array( 'status' => 403 ) );
 		}
 
-		return true;
+		foreach ( self::DASHBOARD_PUBLIC_KEYS as $pem ) {
+			if ( 1 === openssl_verify( $message, $sig_bytes, $pem, OPENSSL_ALGO_SHA256 ) ) {
+				return true;
+			}
+		}
+
+		return new WP_Error( 'kwperf_invalid_signature', 'Invalid signature', array( 'status' => 403 ) );
 	}
 
 	/**
