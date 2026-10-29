@@ -28,7 +28,7 @@ class KWPERF_Cron {
 	 * Hook registration.
 	 */
 	public function __construct() {
-		add_action( self::HOOK, array( $this, 'run_scheduled_scan' ) );
+		add_action( self::HOOK, array( $this, 'run_scheduled_scan_network_aware' ) );
 	}
 
 	/**
@@ -96,6 +96,40 @@ class KWPERF_Cron {
 
 		if ( $enabled ) {
 			wp_schedule_event( self::get_next_run_timestamp( $scan_time ), $interval, self::HOOK );
+		}
+	}
+
+	/**
+	 * Cron callback for HOOK — network-aware on multisite.
+	 *
+	 * Same pseudo-cron problem as the sibling KW Security plugin's
+	 * heartbeat cron (see its classes/telemetry.php): WP-Cron only runs on
+	 * a site that actually gets a page request, so a quiet multisite
+	 * sub-site's own scheduled scan can simply never fire — the site just
+	 * silently never gets scanned, even though the plugin is current and
+	 * active. Whichever site's cron DOES fire sweeps the whole network
+	 * instead, switching into each site's own context and running its scan
+	 * there, exactly as if that site's own cron had fired. A short
+	 * network-wide transient lock keeps several sites' cron firing close
+	 * together from each redundantly re-sweeping the same hour.
+	 */
+	public function run_scheduled_scan_network_aware() {
+		if ( ! is_multisite() ) {
+			$this->run_scheduled_scan();
+			return;
+		}
+
+		$lock_key = 'kwperf_network_scan_lock';
+		if ( get_site_transient( $lock_key ) ) {
+			return;
+		}
+		set_site_transient( $lock_key, time(), HOUR_IN_SECONDS - MINUTE_IN_SECONDS );
+
+		$site_ids = get_sites( array( 'fields' => 'ids', 'deleted' => 0, 'archived' => 0, 'spam' => 0 ) );
+		foreach ( $site_ids as $site_id ) {
+			switch_to_blog( $site_id );
+			$this->run_scheduled_scan();
+			restore_current_blog();
 		}
 	}
 
