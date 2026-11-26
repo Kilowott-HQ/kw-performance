@@ -29,6 +29,7 @@ class KWPERF_Ajax {
 		add_action( 'wp_ajax_kwperf_delete_log', array( $this, 'ajax_delete_log' ) );
 		add_action( 'wp_ajax_kwperf_bulk_delete_logs', array( $this, 'ajax_bulk_delete_logs' ) );
 		add_action( 'wp_ajax_kwperf_recheck_logs', array( $this, 'ajax_recheck_logs' ) );
+		add_action( 'wp_ajax_kwperf_exclude_log', array( $this, 'ajax_exclude_log' ) );
 		add_action( 'wp_ajax_kwperf_test_slack', array( $this, 'ajax_test_slack' ) );
 		add_action( 'wp_ajax_kwperf_save_meta', array( $this, 'ajax_save_meta' ) );
 
@@ -195,6 +196,34 @@ class KWPERF_Ajax {
 				),
 				'resolved'     => $result['resolved'],
 				'still_broken' => $result['still_broken'],
+			)
+		);
+	}
+
+	/**
+	 * AJAX: add a logged link's URL to the "Excluded URLs" setting and
+	 * remove every log row for it, so it's never checked or reported again.
+	 */
+	public function ajax_exclude_log() {
+		$this->verify_request();
+
+		$id  = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
+		$row = $id ? KWPERF_Logger::get_log( $id ) : null;
+
+		if ( ! $row ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid log ID.', 'kw-performance' ) ) );
+		}
+
+		if ( ! KWPERF_Settings::add_excluded_url( $row['broken_url'] ) ) {
+			wp_send_json_error( array( 'message' => __( 'Could not save the URL to the exclusion list.', 'kw-performance' ) ) );
+		}
+
+		$deleted = KWPERF_Logger::delete_logs_by_url( $row['broken_url'] );
+
+		wp_send_json_success(
+			array(
+				/* translators: %d: number of deleted log rows */
+				'message' => sprintf( __( 'URL excluded from future scans; %d log entries removed.', 'kw-performance' ), $deleted ),
 			)
 		);
 	}

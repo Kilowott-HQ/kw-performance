@@ -82,6 +82,9 @@ $export_url = wp_nonce_url(
 	<form method="post" action="options.php">
 		<?php
 		settings_fields( 'kwperf_settings_group' );
+		?>
+		<input type="hidden" name="<?php echo esc_attr( KWPERF_Settings::OPTION_KEY ); ?>[_form]" value="main" />
+		<?php
 		do_settings_sections( 'kwperf-settings' );
 		submit_button( __( 'Save Settings', 'kw-performance' ) );
 		?>

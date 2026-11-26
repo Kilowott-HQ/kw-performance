@@ -48,6 +48,13 @@ class KWPERF_Scanner {
 	private $broken_occurrences = array();
 
 	/**
+	 * Compiled regexes for the "Excluded URLs" setting, built on first use.
+	 *
+	 * @var string[]|null
+	 */
+	private $exclusion_regexes = null;
+
+	/**
 	 * Run a full site scan.
 	 *
 	 * @param string $scan_type 'manual' or 'cron'.
@@ -188,9 +195,10 @@ class KWPERF_Scanner {
 				continue;
 			}
 
-			// Cloudflare-injected endpoints logged before they were excluded
-			// from scans are false positives — clear them without a request.
-			if ( $this->is_cloudflare_internal_url( $row['broken_url'] ) ) {
+			// A URL excluded after it was logged (by the Excluded URLs
+			// setting, or a built-in skip like Cloudflare's /cdn-cgi/) is
+			// cleared without a request, just as a scan would now skip it.
+			if ( $this->is_excluded_url( $row['broken_url'] ) ) {
 				$wpdb->delete( $table, array( 'id' => $log_id ), array( '%d' ) );
 				++$resolved;
 				continue;
@@ -451,7 +459,7 @@ class KWPERF_Scanner {
 			}
 
 			$absolute = $this->resolve_url( $base_url, $href );
-			if ( ! $absolute || $this->is_cloudflare_internal_url( $absolute ) ) {
+			if ( ! $absolute || $this->is_excluded_url( $absolute ) ) {
 				continue;
 			}
 
@@ -515,6 +523,54 @@ class KWPERF_Scanner {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Decide whether a resolved link should be skipped entirely: Cloudflare's
+	 * own endpoints, anything matching the "Excluded URLs" setting, or
+	 * anything a site opts out via the `kwperf_skip_url` filter.
+	 *
+	 * @param string $url Absolute URL.
+	 * @return bool
+	 */
+	public function is_excluded_url( $url ) {
+		$excluded = $this->is_cloudflare_internal_url( $url ) || $this->matches_exclusion_setting( $url );
+
+		/**
+		 * Filter whether a link is skipped by the broken link scanner.
+		 *
+		 * @param bool   $excluded Whether the URL is excluded by the plugin's own rules.
+		 * @param string $url      Absolute URL of the link.
+		 */
+		return (bool) apply_filters( 'kwperf_skip_url', $excluded, $url );
+	}
+
+	/**
+	 * Match a URL against the "Excluded URLs" setting. Each line is a full
+	 * URL pattern, compared case-insensitively, where "*" matches any run of
+	 * characters; a trailing slash on either side is ignored, so
+	 * "https://example.com/page" also covers "https://example.com/page/".
+	 *
+	 * @param string $url Absolute URL.
+	 * @return bool
+	 */
+	private function matches_exclusion_setting( $url ) {
+		if ( null === $this->exclusion_regexes ) {
+			$this->exclusion_regexes = array();
+
+			foreach ( KWPERF_Settings::get_excluded_url_patterns() as $pattern ) {
+				$quoted                    = str_replace( '\*', '.*', preg_quote( untrailingslashit( $pattern ), '#' ) );
+				$this->exclusion_regexes[] = '#^' . $quoted . '/?$#i';
+			}
+		}
+
+		foreach ( $this->exclusion_regexes as $regex ) {
+			if ( preg_match( $regex, $url ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

@@ -26,6 +26,15 @@ class KWPERF_Settings {
 	const OPTION_KEY = 'kwperf_settings';
 
 	/**
+	 * Set while the plugin itself updates the option outside the Settings
+	 * screen (e.g. the 404 Log's "Exclude" action), so sanitize_settings()
+	 * doesn't reschedule the scan cron as a side effect of an unrelated save.
+	 *
+	 * @var bool
+	 */
+	private static $skip_reschedule = false;
+
+	/**
 	 * Hook registration.
 	 */
 	public function __construct() {
@@ -45,6 +54,7 @@ class KWPERF_Settings {
 			'admin_email'        => get_option( 'admin_email' ),
 			'notify_on_empty'    => 0,
 			'post_types'         => array( 'post', 'page' ),
+			'excluded_urls'      => '',
 			'request_timeout'    => 10,
 			'max_redirects'      => 5,
 			'delete_data_on_uninstall' => 0,
@@ -134,6 +144,14 @@ class KWPERF_Settings {
 			'post_types',
 			__( 'Post Types To Scan', 'kw-performance' ),
 			array( $this, 'render_post_types_field' ),
+			'kwperf-settings',
+			'kwperf_main_section'
+		);
+
+		add_settings_field(
+			'excluded_urls',
+			__( 'Excluded URLs', 'kw-performance' ),
+			array( $this, 'render_excluded_urls_field' ),
 			'kwperf-settings',
 			'kwperf_main_section'
 		);
@@ -229,6 +247,8 @@ class KWPERF_Settings {
 			$output['post_types'] = $defaults['post_types'];
 		}
 
+		$output['excluded_urls'] = self::sanitize_url_pattern_list( $input['excluded_urls'] ?? '' );
+
 		$output['request_timeout']          = $defaults['request_timeout'];
 		$output['max_redirects']            = $defaults['max_redirects'];
 		$output['delete_data_on_uninstall'] = empty( $input['delete_data_on_uninstall'] ) ? 0 : 1;
@@ -288,8 +308,24 @@ class KWPERF_Settings {
 			? $input['gtm_placement']
 			: $defaults['gtm_placement'];
 
+		// The Settings and Tracking tabs each post only their own fields to
+		// this one option, so keep whatever the other tab saved instead of
+		// letting its absent fields fall back to defaults. A save with no
+		// "_form" marker (e.g. add_excluded_url()) carries every field.
+		$form          = isset( $input['_form'] ) ? sanitize_key( $input['_form'] ) : '';
+		$tracking_keys = array( 'gtm_ids', 'gtm_placement' );
+		$saved         = self::get_settings();
+
+		if ( 'main' === $form ) {
+			foreach ( $tracking_keys as $key ) {
+				$output[ $key ] = $saved[ $key ];
+			}
+		} elseif ( 'tracking' === $form ) {
+			return array_merge( $saved, array_intersect_key( $output, array_flip( $tracking_keys ) ) );
+		}
+
 		// Reschedule cron if the interval, start time, or enabled state changed.
-		if ( class_exists( 'KWPERF_Cron' ) ) {
+		if ( class_exists( 'KWPERF_Cron' ) && ! self::$skip_reschedule ) {
 			KWPERF_Cron::reschedule( $output['enable_scan'], $output['scan_interval'], $output['scan_time'] );
 		}
 
@@ -317,6 +353,62 @@ class KWPERF_Settings {
 		}
 
 		return implode( ', ', array_values( array_unique( $valid ) ) );
+	}
+
+	/**
+	 * Sanitize the newline-separated list of excluded URL patterns, dropping
+	 * blank lines and duplicates. Lines are kept as plain text rather than
+	 * run through esc_url_raw(), which would mangle "*" wildcards.
+	 *
+	 * @param string $raw Raw textarea input.
+	 * @return string Newline-separated list of patterns (possibly empty).
+	 */
+	public static function sanitize_url_pattern_list( $raw ) {
+		$lines    = preg_split( '/\r\n|\r|\n/', (string) $raw );
+		$patterns = array();
+
+		foreach ( $lines as $line ) {
+			$line = trim( sanitize_text_field( $line ) );
+			if ( '' !== $line ) {
+				$patterns[] = $line;
+			}
+		}
+
+		return implode( "\n", array_values( array_unique( $patterns ) ) );
+	}
+
+	/**
+	 * Get the configured excluded URL patterns as an array.
+	 *
+	 * @return string[]
+	 */
+	public static function get_excluded_url_patterns() {
+		$raw = (string) self::get( 'excluded_urls', '' );
+		return '' === $raw ? array() : explode( "\n", $raw );
+	}
+
+	/**
+	 * Append a URL to the excluded URL list, unless it's already there.
+	 *
+	 * @param string $url URL (or pattern) to exclude from future scans.
+	 * @return bool True if the list now contains the URL.
+	 */
+	public static function add_excluded_url( $url ) {
+		$patterns = self::get_excluded_url_patterns();
+
+		if ( in_array( $url, $patterns, true ) ) {
+			return true;
+		}
+
+		$settings                  = self::get_settings();
+		$patterns[]                = $url;
+		$settings['excluded_urls'] = implode( "\n", $patterns );
+
+		self::$skip_reschedule = true;
+		update_option( self::OPTION_KEY, $settings );
+		self::$skip_reschedule = false;
+
+		return in_array( $url, self::get_excluded_url_patterns(), true );
 	}
 
 	/**
@@ -457,6 +549,17 @@ class KWPERF_Settings {
 			<?php endforeach; ?>
 		</fieldset>
 		<p class="description"><?php esc_html_e( 'Content types included when crawling the site for links.', 'kw-performance' ); ?></p>
+		<?php
+	}
+
+	/**
+	 * Render: Excluded URLs textarea.
+	 */
+	public function render_excluded_urls_field() {
+		$value = self::get( 'excluded_urls' );
+		?>
+		<textarea class="large-text code" rows="5" id="kwperf_excluded_urls" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[excluded_urls]" placeholder="https://example.com/some-page/&#10;https://partner-site.com/*&#10;*/wp-login.php*"><?php echo esc_textarea( $value ); ?></textarea>
+		<p class="description"><?php esc_html_e( 'Links matching any of these are never checked or reported. One URL per line; use * as a wildcard. Cloudflare /cdn-cgi/ links are always skipped.', 'kw-performance' ); ?></p>
 		<?php
 	}
 

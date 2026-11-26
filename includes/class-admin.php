@@ -95,6 +95,7 @@ class KWPERF_Admin {
 					'confirmClear'        => __( 'Are you sure you want to clear all logs? This cannot be undone.', 'kw-performance' ),
 					'confirmClearHistory' => __( 'Are you sure you want to clear all scan history? This cannot be undone.', 'kw-performance' ),
 					'confirmDelete'       => __( 'Delete this log entry?', 'kw-performance' ),
+					'confirmExclude'      => __( 'Exclude this URL from all future scans? It will be added to Excluded URLs in Settings and removed from this log.', 'kw-performance' ),
 					'confirmBulk'         => __( 'Delete the selected log entries?', 'kw-performance' ),
 					'noSelection'         => __( 'Please select at least one row.', 'kw-performance' ),
 					'testingSlack'        => __( 'Sending test message…', 'kw-performance' ),

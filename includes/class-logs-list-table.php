@@ -110,6 +110,11 @@ class KWPERF_Logs_List_Table extends WP_List_Table {
 				absint( $item['id'] ),
 				esc_html__( 'Recheck', 'kw-performance' )
 			),
+			'exclude'  => sprintf(
+				'<a href="#" class="kwperf-exclude-single" data-id="%d">%s</a>',
+				absint( $item['id'] ),
+				esc_html__( 'Exclude', 'kw-performance' )
+			),
 			'delete'   => sprintf(
 				'<a href="#" class="kwperf-delete-single" data-id="%d">%s</a>',
 				absint( $item['id'] ),

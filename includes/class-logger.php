@@ -241,6 +241,18 @@ class KWPERF_Logger {
 	}
 
 	/**
+	 * Delete every log row for a given broken URL, across all source pages.
+	 *
+	 * @param string $url Broken URL.
+	 * @return int Number of rows deleted.
+	 */
+	public static function delete_logs_by_url( $url ) {
+		global $wpdb;
+		$table = KWPERF_Database::logs_table();
+		return (int) $wpdb->delete( $table, array( 'broken_url' => $url ), array( '%s' ) );
+	}
+
+	/**
 	 * Delete multiple log rows.
 	 *
 	 * @param int[] $ids Log row IDs.

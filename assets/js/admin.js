@@ -220,6 +220,24 @@
 		} );
 	} );
 
+	$( document ).on( 'click', '.kwperf-exclude-single', function ( e ) {
+		e.preventDefault();
+
+		if ( ! window.confirm( kwperf.i18n.confirmExclude ) ) {
+			return;
+		}
+
+		var id      = $( this ).data( 'id' );
+		var $result = $( '#kwperf-log-action-result' );
+
+		kwperfRequest( 'kwperf_exclude_log', { id: id } ).done( function ( response ) {
+			showNotice( $result, response.data.message, ! response.success );
+			if ( response.success ) {
+				window.location.reload();
+			}
+		} );
+	} );
+
 	$( document ).on( 'click', '.kwperf-recheck-single', function ( e ) {
 		e.preventDefault();
 
