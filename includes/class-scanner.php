@@ -188,6 +188,14 @@ class KWPERF_Scanner {
 				continue;
 			}
 
+			// Cloudflare-injected endpoints logged before they were excluded
+			// from scans are false positives — clear them without a request.
+			if ( $this->is_cloudflare_internal_url( $row['broken_url'] ) ) {
+				$wpdb->delete( $table, array( 'id' => $log_id ), array( '%d' ) );
+				++$resolved;
+				continue;
+			}
+
 			$result = $this->check_url( $row['broken_url'] );
 
 			if ( $this->is_broken( $result ) ) {
@@ -443,7 +451,7 @@ class KWPERF_Scanner {
 			}
 
 			$absolute = $this->resolve_url( $base_url, $href );
-			if ( ! $absolute ) {
+			if ( ! $absolute || $this->is_cloudflare_internal_url( $absolute ) ) {
 				continue;
 			}
 
@@ -507,6 +515,23 @@ class KWPERF_Scanner {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Detect Cloudflare's reserved /cdn-cgi/ endpoints (email obfuscation,
+	 * challenge platform, Rocket Loader, etc.). Cloudflare injects these into
+	 * the served HTML — e.g. it rewrites every mailto: link into
+	 * "/cdn-cgi/l/email-protection#…" — and they don't answer a plain
+	 * server-side request with a 2xx, so checking them only produces false
+	 * positives.
+	 *
+	 * @param string $url Absolute URL.
+	 * @return bool
+	 */
+	private function is_cloudflare_internal_url( $url ) {
+		$path = (string) wp_parse_url( $url, PHP_URL_PATH );
+
+		return 0 === stripos( $path, '/cdn-cgi/' ) || 0 === strcasecmp( $path, '/cdn-cgi' );
 	}
 
 	/**
